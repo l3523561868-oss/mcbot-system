@@ -31,7 +31,7 @@
 
 ```bash
 git grep -niE "password|passwd|api[_-]?key|token|secret|BEGIN .*PRIVATE KEY" -- .
-git grep -niE "aspireworld|yuan_bot|universal|muyiyang|25159" -- .
+git grep -niE "aspirewor[l]d|yuan_bo[t]|universa[l]|muyiyan[g]|2515[9]" -- .
 git grep -nE "sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}" -- .
 ```
 
