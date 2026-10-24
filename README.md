@@ -198,11 +198,3 @@ prismarine-nbt / prismarine-registry）的修改版完整文件，版权归各�
 本项目不包含任何 Minecraft 客户端资源、模组文件或整合包内容；
 `src/bot/capture/` 中的通道表为示意样本。Minecraft 是 Mojang Studios 的商标，
 本项目与 Mojang / Microsoft 无关联。
-
----
-
-## 10. 发布到 GitHub
-
-完整手动流程（建空仓库 → 生成 PAT → 关联 remote → 推送 → 验证 → 常见报错）见
-[docs/09-手动上传指南.md](docs/09-手动上传指南.md)。
-推送前请务必执行该文档第 0 节的敏感信息复查。
