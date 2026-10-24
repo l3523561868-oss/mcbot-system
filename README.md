@@ -42,14 +42,23 @@
 
 ## 2. 快速开始（PC，5 分钟）
 
+**方式 A：一键安装（Windows）**
+
+```powershell
+# 先只检查，不做任何修改
+powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -Check
+
+# 确认无误后安装：npm install → 打补丁 → 复制配置模板 → 体检
+powershell -ExecutionPolicy Bypass -File scripts\install.ps1
+```
+
+**方式 B：手动四步**
+
 ```bash
-# 0) 体检（缺什么、下一步做什么，一条命令说清）
+# 1) 体检（缺什么、下一步做什么，一条命令说清）
 python scripts/doctor.py
 
-# 1) 依赖：Python 3.10+ / Node 18+ / Git
-python --version && node --version
-
-# 2) 装 Node 依赖（约 300–600 MB）
+# 2) 装 Node 依赖（约 300–600 MB）并恢复补丁
 cd src/bot && npm install && node apply-patches.mjs
 
 # 3) 配置账号（把示例复制成真配置，再填自己的）
@@ -106,7 +115,7 @@ mcbot-system/
 │   ├── bot/                  协议 bot 本体 + 通道样本 + node_modules 补丁
 │   ├── deploy/               Termux 部署包脚本 + PC 端打包器
 │   ├── android/              WebView APK 工程（Android Studio）
-│   └── tools/                探针、看门狗、安全导航
+│   └── tools/                探针、看门狗、安全导航、通道表工具
 ├── config/                   示例配置（真实口令不入库）
 ├── scripts/                  doctor.py 体检 + Windows 启动 bat
 └── assets/                   控制台截图

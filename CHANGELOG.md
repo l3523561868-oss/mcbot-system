@@ -2,21 +2,29 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
-## [Unreleased]
+## [1.1.0] - 2026-10-24
+
+把"能看懂"补成"能一把装起来"：加体检、加一键安装、加通道表工具、加两份关键文档。
 
 ### 新增
 
-- `scripts/doctor.py`：环境体检与运行校验（Python/Node/npm、必要文件、node_modules 补丁哈希、
-  通道表条数、`bots.json`、端口占用、控制台 HTTP、`/state` 在线态），支持 `--verify` / `--json` / `--strict`。
-- `docs/01-部署流程/05-获取整合包与抓包.md`：整合包三条获取路径、通道表抓取与落盘、校验与常见失败。
-- `docs/01-部署流程/06-本地存档与局域网.md`：单人存档 / 对局域网开放 的接入步骤与限制。
-- 环境变量 `MC_VERSION`（默认 `1.21.1`）与 `MC_CAPTURE`（自定义抓包路径）、`MIN_CHANNELS`、`ALLOW_SAMPLE`。
+- `scripts/doctor.py`：环境体检与运行校验（Python/Node/npm/git、必要文件、node_modules 补丁 md5、
+  通道表条数、`bots.json`、端口占用、控制台 HTTP、`/state` 在线态），支持 `--verify` / `--json` / `--strict`，
+  退出码 `0/1/2`；配套 `scripts/体检.bat`。
+- `scripts/install.ps1`：Windows 一键安装（查运行时 → `npm install` → 打补丁 → 复制配置模板 → 体检），
+  `-Check` 只检查；不覆盖已有配置、不改系统设置、不需要管理员。
+- `src/tools/channels.mjs`：通道表离线工具（`validate` / `diff` / `merge` / `spec`），只读写本地文件，不联网。
+- `docs/01-部署流程/05-获取整合包与抓包.md`：整合包三条件核对、三条获取路径、抓包四要素、校验与失败对照。
+- `docs/01-部署流程/06-本地存档与局域网.md`：单人存档 / 对局域网开放 的接入步骤、与公服的差异、限制与故障表。
+- 运行时声明：`.nvmrc`（22）、`.python-version`（3.11，兼容 3.10+）。
+- 环境变量：`MC_VERSION`（默认 `1.21.1`）、`MC_CAPTURE`、`MIN_CHANNELS`、`ALLOW_SAMPLE`。
 
 ### 变更
 
 - **通道表改为硬阻断**：`forge-live.mjs` 检测到通道表少于 `MIN_CHANNELS`（默认 100）时直接 `exit 2`
   并打印解决路径，不再"警告后继续跑"。仅本地演示可用 `ALLOW_SAMPLE=1` 放行。
-- `select_known_packs` 与原版版本号改为跟随 `MC_VERSION`，便于接入其他 1.21.x 环境。
+- `select_known_packs` 与原版版本号改为跟随 `MC_VERSION`，便于接入本地存档与其他 1.21.x 环境。
+- 补丁来源路径不再回退到原作者机器的绝对路径，统一走 `capture/` 或 `MC_CAPTURE`。
 
 ---
 
@@ -67,4 +75,5 @@
 - 安卓后台仍可能被系统回收，`wake-lock` 与电池白名单只能降低概率。
 - `forge-live.mjs` 无单元测试，回归依赖日志与握手自检。
 
+[1.1.0]: https://github.com/l3523561868-oss/mcbot-system/releases/tag/v1.1.0
 [1.0.0]: https://github.com/l3523561868-oss/mcbot-system/releases/tag/v1.0.0

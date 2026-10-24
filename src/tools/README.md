@@ -8,6 +8,25 @@
 | `probe_dump.mjs` | 抓 `modded_network_setup_failed` 原始载荷并尝试解码 |
 | `watchdog.py` | 通用 HTTP 探活 + 自动重启（防抖动、防自杀） |
 | `safe_nav.py` | 分段验路防坠落导航 |
+| `channels.mjs` | **通道表离线工具**：校验 / 对比 / 合并 / 生成版本表骨架（不联网、不碰凭证） |
+
+## 通道表工具
+
+```bash
+node src/tools/channels.mjs validate src/bot/capture/channel-capture.json --spec src/bot/channel-specs.json
+node src/tools/channels.mjs diff  old.json new.json
+node src/tools/channels.mjs merge a.json b.json -o channel-capture.merged.json
+node src/tools/channels.mjs spec  capture.json -o channel-specs.json
+```
+
+| 子命令 | 用途 |
+|---|---|
+| `validate` | 结构校验（id 命名空间、proto/flow 取值、类型、重复、条数是否像样本）+ 版本表覆盖率 |
+| `diff` | 换服前后差哪些通道（`仅 A 有` = 该删，`仅 B 有` = 该补） |
+| `merge` | 合并两套抓包（按 `proto+id` 去重，先到先留） |
+| `spec` | 由抓包生成 `channel-specs.json` 骨架 |
+
+退出码：`0` 通过 / `1` 有问题。只读写本地文件，不连服务器。
 
 ## 探针
 
