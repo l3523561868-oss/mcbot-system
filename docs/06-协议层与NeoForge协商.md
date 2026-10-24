@@ -10,7 +10,7 @@
 | 项 | 结论 | 证据来源 |
 |---|---|---|
 | 版本 | MC 1.21.1（协议 767） | 探针握手 |
-| 模组加载器 | **NeoForge 21.1.251**（外层 Youer） | `modded_network_setup_failed` 载荷原文含 `"NeoForge 21.1.251"` |
+| 模组加载器 | **NeoForge 21.1.x**（外层为服务端代理层） | `modded_network_setup_failed` 载荷原文含 `"NeoForge 21.1.x"` |
 | 正版验证 | **离线模式**（登录直接 success） | probe_connect：无正版校验流程 |
 | 二次认证 | **AuthMe**（进服后需 `/login <服内密码>`） | 聊天提示 `[玩家系统] 请输入"/login <密码>"以登录` |
 | 多入口 | 多个域名/IP 指向**同一后端** | 三个入口在线数与 MOTD 完全一致 |
@@ -44,7 +44,7 @@
 |---|---|---|
 | `minecraft:unregister` | 2747 B | 撤销客户端已注册的通道 |
 | `minecraft:register` | 133 B | 服务端的监听表 |
-| `neoforge:register` | 1 B（`0x00` = 空表） | **要求客户端上报自己的 1305 个通道** |
+| `neoforge:register` | 1 B（`0x00` = 空表） | **要求客户端上报自己的全部通道（实测环境约 1300 个）** |
 
 客户端不回 `neoforge:register`（或回空表）→ 服务端判定"你没装 NeoForge"→ 踢。
 
@@ -57,15 +57,15 @@
 
 | 文件 | 大小 | 缺了会怎样 |
 |---|---|---|
-| `capture/channel-capture.json` | 143 KB / **1305 条** | **致命**：`capturedGroups()` 返回 null → 静默不回 register → 被踢 |
-| `channel-specs.json` | 90 KB / 1218 条 | 非致命：通道版本号退回 `"1"`，可能触发 `modded_network_setup_failed` |
+| `capture/channel-capture.json` | 实测 143 KB / 约 1300 条；**仓库内为 12 条样本** | **致命**：`capturedGroups()` 返回 null → 静默不回 register → 被踢 |
+| `channel-specs.json` | 实测 90 KB / 约 1200 条；**仓库内为 8 条样本** | 非致命：通道版本号退回 `"1"`，可能触发 `modded_network_setup_failed` |
 | `capture/known-packs-real.json` + `packet-seq-real.json` | 小 | 影响 known packs 协商与包序对齐 |
 
 **最容易踩的地方**：这些文件缺失时**不报错、不崩**，只是静默降级，然后在服务端被踢。
 所以排错时必须主动 grep 日志里有没有：
 
 ```
->> C->S neoforge:register（1305 通道）
+>> C->S neoforge:register（N 通道）
 ✅ 协商成功
 ```
 
@@ -142,9 +142,9 @@ Transform 的 `transform` 必须用**普通函数**（`this.push` 要指向 Tran
 |---|---|---|
 | 进服 / 移动 / 挖掘 / 聊天 | ✅ | 主链路稳定 |
 | 背包读取与装备切换 | ✅ | `inv_list` + `equip` 已实测 |
-| Waystones 传送 | ✅ | 必须先 `ws_open2` 开界面再选点 |
+| 传送模组（石碑类） | ✅ | 必须先 `ws_open2` 开界面再选点 |
 | 打开模组 GUI（部分容器 / 尸体） | ❌ | 开界面即断线：0x11 / 0x58 / 0x5b 包解析失败 |
-| 饰品栏（Curios） | ❌ | 协议层读不到，仅 UI 占位 |
+| 扩展饰品栏 | ❌ | 协议层读不到，仅 UI 占位 |
 | 正版验证服务器 | ❌ | 无会话密钥，离线协议无法通过 |
 | 内螺纹式"发包即生效"的复杂 GUI 操作 | ⚠️ | 依赖具体模组，需逐个验证 |
 

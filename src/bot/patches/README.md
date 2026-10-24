@@ -16,7 +16,7 @@
 2. **`packetFilter` Transform**（补丁2，2026-10-16 新增）
    - 位置：构造函数 + 4 个 pipe 点（deserializer error 恢复、state setter 的 unpipe/pipe、setCompressionThreshold）
    - 作用：在 decompressor → deserializer 之间插入过滤器，丢弃 play 阶段的 `window_items`(0x13) 包。
-   - 原因：Youer 服务器发的 window_items 包 items 数组 count 字段错位（读到 44149143 > 0xffffff 上限），protodef 抛 "array size is abnormally large" → 聊天管道失效 + 30s 超时踢。bot_two 账号不触发（无 speak 权限，服务器不发该包），bot_one 账号必现。
+   - 原因：服务端代理层发出的 window_items 包 items 数组 count 字段错位（读到 44149143 > 0xffffff 上限），protodef 抛 "array size is abnormally large" → 聊天管道失效 + 30s 超时踢。bot_two 账号不触发（无 speak 权限，服务器不发该包），bot_one 账号必现。
    - 关键实现细节：Transform 的 `transform` 必须用**普通函数**（`this.push` 需要指向 Transform 实例），用 `const self = this` 闭包引用 Client 的 `protocolState`。箭头函数会导致 `this.push is not a function`。
 
 ## 恢复方法

@@ -20,7 +20,7 @@ node probe.mjs <host> <port> <username>
 | 结果 | 含义 |
 |---|---|
 | 卡在 `configuration` 20s 不被踢 | 服务端在等 `neoforge:register`，客户端没回 |
-| 0.7s 内被踢 `incompatible` | 回了空通道表 → 缺 1305 条通道定义 |
+| 0.7s 内被踢 `incompatible` | 回了空通道表 → 缺通道定义 |
 | 直接进 PLAY | 该服不要求 NeoForge 协商 |
 
 ## 看门狗

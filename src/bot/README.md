@@ -5,9 +5,9 @@
 | 文件 | 说明 |
 |---|---|
 | `forge-live.mjs` | 主程序：NeoForge 握手伪造层、通道注册、AuthMe 守卫、寻路/工作/背包/传送、HTTP 决策桥（104 动作） |
-| `capture/channel-capture.json` | **致命依赖**：1305 条 NeoForge 通道 |
+| `capture/channel-capture.json` | **致命依赖**：NeoForge 通道表（仓库内为 12 条示意样本） |
 | `capture/known-packs-real.json` / `packet-seq-real.json` | known packs 与包序对齐 |
-| `channel-specs.json` | 1218 条通道版本号 |
+| `channel-specs.json` | 通道版本号映射（仓库内为 8 条示意样本） |
 | `patches/` | 5 个 node_modules 完整替换文件 |
 | `apply-patches.mjs` | 补丁恢复器 |
 
@@ -47,7 +47,7 @@ BOT_PW='<AuthMe口令>' BOT_REG=0 COMBAT_OFF=1 XP_LOW_LEVEL=0 BRIDGE_PORT=8801 \
 日志必须出现：
 
 ```
->> C->S neoforge:register（1305 通道）
+>> C->S neoforge:register（N 通道）
 ✅ 协商成功
 ```
 

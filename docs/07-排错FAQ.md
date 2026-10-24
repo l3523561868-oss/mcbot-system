@@ -66,7 +66,7 @@ grep -E "neoforge:register|协商成功|problem inflating|/login|kicked|end" bot
 
 | 日志特征 | 结论 | 处理 |
 |---|---|---|
-| 没有 `neoforge:register（1305 通道）` | 缺通道表 | 补 `capture/channel-capture.json`（K14） |
+| 没有 `neoforge:register（N 通道）` | 缺通道表 | 补 `capture/channel-capture.json`（K14） |
 | 有 `problem inflating chunk` | 补丁丢了 | `node apply-patches.mjs`（K23） |
 | 反复 `>> /login` | AuthMe 守卫在补发；口令可能不对 | 核对 `BOT_PW`（K27） |
 | 有 `kicked` | 看被踢原因原文 | 对照 K14 / 限流 |

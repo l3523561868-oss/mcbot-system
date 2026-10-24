@@ -41,13 +41,16 @@ try {
   console.log("[log] 实时日志 → " + LOG_FILE);
 } catch (e) { /* 日志落盘失败不影响主流程 */ }
 
-// ---- NeoForge 通道数据（同 forge-mf.mjs） ----
+// ---- NeoForge 通道数据 ----
+// 可用环境变量 MC_CAPTURE 指定抓包文件；默认读同目录 capture/channel-capture.json。
+// ⚠️ 仓库内该文件是**示意样本**（仅演示结构），必须用真客户端抓包替换后才能连真服。
 let CAPTURED = null;
 try {
-  // 交接包把抓包放在 capture/ 下；原版写死原作者机器的绝对路径，这里优先相对路径、回退旧路径
-  const _capLocal = path.join(HERE, "capture", "channel-capture.json");
-  const _capLegacy = "D:/AI玩家/AI/channel-capture.json";
-  CAPTURED = JSON.parse(fs.readFileSync(fs.existsSync(_capLocal) ? _capLocal : _capLegacy, "utf8"));
+  const _capLocal = process.env.MC_CAPTURE || path.join(HERE, "capture", "channel-capture.json");
+  CAPTURED = JSON.parse(fs.readFileSync(_capLocal, "utf8"));
+  if (Array.isArray(CAPTURED) && CAPTURED.length < 100) {
+    console.log(`!! 注意：通道表只有 ${CAPTURED.length} 条，多半是示意样本，连真服会被踢`);
+  }
 } catch (e) { console.log("!! 通道表缺失:", e.message); }
 
 const varint = (n) => {
@@ -709,7 +712,7 @@ function startBot() {
       if (groups) {
         const payload = Buffer.concat([varint(groups.length), ...groups.map(([pid, comps]) => Buffer.concat([varint(pid), varint(comps.length), ...comps]))]);
         client.write("custom_payload", { channel: "neoforge:register", data: payload });
-        console.log(">> C->S neoforge:register（1305 通道）");
+        console.log(`>> C->S neoforge:register（${CAPTURED ? CAPTURED.length : 0} 通道）`);
       }
     } else if (ch === "neoforge:network") {
       console.log("✅ 协商成功");

@@ -8,15 +8,31 @@
 |---|---|
 | bot 的 AuthMe 口令 | 替换为 `<BOT1_PASSWORD>` / `<AUTHME_PASSWORD>` 占位 |
 | LLM API Key | 只留 `<YOUR_API_KEY>` 占位 |
-| 本机绝对路径 / 用户名 | 替换为 `%USERPROFILE%` / `%PROJECT_ROOT%` |
+| 服务器地址 / 端口 | 统一替换为 `mc.example.com:25565` |
+| 备用入口 IP | 全部删除，只留一条示例 |
+| 真实账号名 | 替换为 `bot_one` / `bot_two` |
+| 真实玩家名 | 替换为 `player_x` / `player_y` / `Bot-A` / `Bot-B` |
+| **整合包内容** | `src/bot/capture/` 与 `channel-specs.json` 只保留 **12 / 8 条示意样本**（`examplemod:*`、`samplelib:*`），真实通道表不入库 |
+| 模组加载器构建号 | 泛化为 `21.1.x`，不写具体 build |
+| 本机绝对路径 / 用户名 | 替换为 `%USERPROFILE%` / `%PROJECT_ROOT%` / `$HOME` |
 | 私网 IP | 替换为 `192.168.1.50` 示例 |
-| 运行日志、`usage.json`、真实 `bots.json` | 不入库 |
-| 第三方模组物品图标 | 不入库（版权） |
+| 运行日志、`usage.json`、真实 `bots.json`、`.env` | 不入库 |
+| 第三方模组物品图标、皮肤文件 | 不入库（版权） |
+| 截图 | 用 `mock_bot.py` 演示环境重拍（Bot-A / Bot-B） |
+
+> 通道表被刻意替换成样本：它能反推出整合包里装了哪些模组、各通道版本号，
+> 属于"整合包指纹"。样本保留了结构，读者能照着格式自己抓，但拿不到原包的清单。
+
+另外：`src/bot/forge-live.mjs` 里保留了少量通道名字面量（如 `neoforge:*`、`minecraft:*`
+与文中已泛化的模组通道），它们是**协议实现所必需**的常量，等价于"如何拼这类包"的示例；
+真实整合包的完整通道清单、版本号与数量均未入库。
 
 推送到任何公开位置前，请再自行检查一遍：
 
 ```bash
 git grep -niE "password|passwd|api[_-]?key|token|secret|BEGIN .*PRIVATE KEY" -- .
+git grep -niE "aspireworld|yuan_bot|universal|muyiyang|25159" -- .
+git grep -nE "sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}" -- .
 ```
 
 ## 2. 控制台的安全模型

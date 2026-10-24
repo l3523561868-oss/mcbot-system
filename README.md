@@ -63,6 +63,11 @@ python console.py --port 8900          # 另开窗口：python brain.py --port 8
 浏览器打开 `http://127.0.0.1:8900` 即可。完整步骤（含 GUI 版、开机自启、校验点）见
 [docs/01-部署流程/01-PC端部署.md](docs/01-部署流程/01-PC端部署.md)。
 
+> ⚠️ **仓库内的 `src/bot/capture/` 是 12 条示意样本，不能连任何真实 NeoForge 服务器。**
+> 连接真服前必须用与目标服务器一致的整合包抓一份通道表替换它，
+> 否则会被服务端以"你没有安装 NeoForge"为由踢掉。步骤见
+> [src/bot/capture/README.md](src/bot/capture/README.md)。
+
 **只想看界面长什么样**：`python mock_bot.py` 起两个假 bot，控制台全部功能都能点，不用真服务器。
 
 ---
@@ -70,8 +75,10 @@ python console.py --port 8900          # 另开窗口：python brain.py --port 8
 ## 3. 仓库结构
 
 ```
-mcbot/
+mcbot-system/
 ├── README.md                  ← 本文件（总入口）
+├── LICENSE                    MIT
+├── SECURITY.md                脱敏清单 / 鉴权模型 / 合规提示
 ├── docs/
 │   ├── 00-项目总览.md          背景 / 目标 / 演进 / 组件清单 / 里程碑
 │   ├── 01-部署流程/
@@ -85,10 +92,11 @@ mcbot/
 │   ├── 05-经验总结.md          ★ 27 条实测踩坑（现象/根因/解法）
 │   ├── 06-协议层与NeoForge协商.md  ★ 本项目的技术核心
 │   ├── 07-排错FAQ.md           按症状查
-│   └── 08-开发历程与里程碑.md
+│   ├── 08-开发历程与里程碑.md
+│   └── 09-手动上传指南.md      ★ 推送到 GitHub 的完整手动流程
 ├── src/
 │   ├── console/              控制台后端 + 单页前端 + GUI/启动器
-│   ├── bot/                  协议 bot 本体 + 抓包 + node_modules 补丁
+│   ├── bot/                  协议 bot 本体 + 通道样本 + node_modules 补丁
 │   ├── deploy/               Termux 部署包脚本 + PC 端打包器
 │   ├── android/              WebView APK 工程（Android Studio）
 │   └── tools/                探针、看门狗、安全导航
@@ -103,7 +111,7 @@ mcbot/
 
 | 能力 | 状态 | 说明 |
 |---|---|---|
-| 协议 bot 进 NeoForge 服务器 | ✅ | 1305 通道协商 + AuthMe 登录，无需游戏客户端 |
+| 协议 bot 进 NeoForge 服务器 | ✅ | 上千条通道协商 + AuthMe 登录，无需游戏客户端 |
 | 网页派发动作 | ✅ | 移动/挖掘/工作/跟随/说话/进食/装备，104 个原生动词 |
 | 多 bot 同时在线 | ✅ | 每 bot 一个进程一个端口，控制台统一调度 |
 | bot 之间互相指挥 | ✅ | 游戏内 `@bot 动词 参数`，白名单 + 目标租约 |
@@ -123,6 +131,7 @@ mcbot/
 - **想改功能** → `docs/03-PC端控制台.md` + `docs/06-协议层与NeoForge协商.md`
 - **出故障** → `docs/07-排错FAQ.md`；查不到再翻 `docs/05-经验总结.md`
 - **接手维护** → 先读 `docs/00-项目总览.md` 的组件清单与 `docs/08` 的演进时间线
+- **要发布到 GitHub** → `docs/09-手动上传指南.md`（含公开前脱敏检查、PAT、三条上传路线）
 
 ---
 
@@ -146,7 +155,7 @@ mcbot/
 | 短板 | 影响 | 现状 |
 |---|---|---|
 | `forge-live.mjs` 无单元测试 | 回归靠日志与实测 | 关键路径用 `restart.sh` 的握手自检兜底 |
-| 模组 GUI（Waystones / 尸体 / 部分容器）打开即断线 | 部分交互用不了 | 已定位为包解析失败（0x11/0x58/0x5b），未根治 |
+| 模组 GUI（传送石碑 / 尸体 / 部分容器）打开即断线 | 部分交互用不了 | 已定位为包解析失败（0x11/0x58/0x5b），未根治 |
 | 注册表条目解析丢 38%~63% 的 damage_type/enchantment | 少量属性不准 | 物品/方块/维度关键表完整，不影响主要功能 |
 | 手机端后台可能被 Android 回收 | bot 掉线 | `wake-lock` + 电池白名单只能压低概率 |
 | 前端 67 KB 单文件 | 手机首屏慢 | 已做图标负缓存 + HTTP/1.1 复用，首屏 ~1s |
@@ -159,3 +168,24 @@ mcbot/
 
 > 截图为 `mock_bot.py` 演示环境（Bot-A / Bot-B），不含真实账号与服务器信息。
 > 复现方式：`scripts/启动_演示模式.bat`。
+
+---
+
+## 9. 许可
+
+本项目以 **MIT** 许可发布，见 [LICENSE](LICENSE)。
+
+`src/bot/patches/` 内是对若干 MIT 许可第三方库（minecraft-protocol / mineflayer /
+prismarine-nbt / prismarine-registry）的修改版完整文件，版权归各上游项目所有。
+
+本项目不包含任何 Minecraft 客户端资源、模组文件或整合包内容；
+`src/bot/capture/` 中的通道表为示意样本。Minecraft 是 Mojang Studios 的商标，
+本项目与 Mojang / Microsoft 无关联。
+
+---
+
+## 10. 发布到 GitHub
+
+完整手动流程（建空仓库 → 生成 PAT → 关联 remote → 推送 → 验证 → 常见报错）见
+[docs/09-手动上传指南.md](docs/09-手动上传指南.md)。
+推送前请务必执行该文档第 0 节的敏感信息复查。
