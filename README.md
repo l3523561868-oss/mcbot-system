@@ -78,6 +78,7 @@ python console.py --port 8900          # 另开窗口：python brain.py --port 8
 mcbot-system/
 ├── README.md                  ← 本文件（总入口）
 ├── LICENSE                    MIT
+├── CHANGELOG.md               版本记录（当前 v1.0.0）
 ├── SECURITY.md                脱敏清单 / 鉴权模型 / 合规提示
 ├── docs/
 │   ├── 00-项目总览.md          背景 / 目标 / 演进 / 组件清单 / 里程碑
@@ -173,7 +174,7 @@ mcbot-system/
 
 ## 9. 许可
 
-本项目以 **MIT** 许可发布，见 [LICENSE](LICENSE)。
+本项目以 **MIT** 许可发布，见 [LICENSE](LICENSE)；版本变更见 [CHANGELOG.md](CHANGELOG.md)。
 
 `src/bot/patches/` 内是对若干 MIT 许可第三方库（minecraft-protocol / mineflayer /
 prismarine-nbt / prismarine-registry）的修改版完整文件，版权归各上游项目所有。
