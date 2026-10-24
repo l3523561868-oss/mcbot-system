@@ -1,0 +1,14 @@
+# 统一换行符，避免 shell 脚本被 Windows 的 CRLF 破坏（在 Termux 里会报 /bin/sh^M）
+* text=auto
+
+*.sh   text eol=lf
+*.mjs  text eol=lf
+*.js   text eol=lf
+*.py   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+*.png binary
+*.ico binary

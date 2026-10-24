@@ -1,0 +1,13 @@
+{
+  "mode": "llm",
+  "llm": {
+    "url": "https://api.deepseek.com/chat/completions",
+    "key": "<YOUR_API_KEY>",
+    "model": "deepseek-chat",
+    "max_tokens": 120
+  },
+  "agent": {
+    "cli": "<path-to-a-local-agent-cli>",
+    "note": "mode=agent 需要该 CLI 有独立的磁盘登录凭证，否则会卡在鉴权；实测不可用，建议只用 llm"
+  }
+}

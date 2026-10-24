@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">MC 控制台</string>
+
+    <!-- ⚠️ 改成你电脑的访问地址（关键！）：
+         方式A（Tailscale，推荐）：http://100.x.x.x:8900
+         方式B（同一 WiFi 家用）：http://192.168.x.x:8900
+         方式C（ngrok 等公网隧道）：https://xxxx.ngrok-free.dev  （注意用 https）
+         末尾不要留斜杠 -->
+    <string name="console_url">http://100.100.100.100:8900</string>
+</resources>

@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MC 多 bot 控制台</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:rgba(17,21,33,.78); --line:rgba(139,92,246,.22);
+    --text:#dbe4f3; --muted:#7f8ba3;
+    --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+    --p1:#8b5cf6; --p2:#22d3ee; --p3:#f472b6; --p4:#a3e635;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;color:var(--text);
+    font:13px/1.6 Consolas,"Microsoft YaHei",monospace;
+    display:flex;flex-direction:column;height:100vh;overflow:hidden;
+    background:
+      radial-gradient(900px 520px at 12% -8%, rgba(139,92,246,.16), transparent 60%),
+      radial-gradient(820px 480px at 88% 0%, rgba(34,211,238,.12), transparent 60%),
+      radial-gradient(700px 500px at 55% 110%, rgba(244,114,182,.10), transparent 60%),
+      linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px),
+      var(--bg);
+    background-size:auto,auto,auto,28px 28px,28px 28px,auto;
+    background-attachment:fixed;
+  }
+  header{
+    display:flex;align-items:center;gap:12px;padding:10px 16px;position:sticky;top:0;z-index:5;
+    background:rgba(11,14,20,.85);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  header h1{
+    font-size:16px;margin:0;font-weight:700;letter-spacing:.14em;
+    display:flex;align-items:center;gap:9px;
+    background:linear-gradient(90deg,#c4b5fd,#7dd3fc,#f9a8d4);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 22px rgba(139,92,246,.35);
+  }
+  .logo{width:15px;height:15px;flex:none;
+    background:linear-gradient(#4ade80 0 45%, #8a6642 45% 100%);
+    box-shadow:0 0 12px rgba(74,222,128,.55), inset 0 0 0 1px rgba(0,0,0,.5);}
+  .pill{padding:1px 9px;border:1px solid rgba(255,255,255,.10);border-radius:3px;
+    background:rgba(255,255,255,.04);color:var(--muted);font-size:11.5px}
+  .col{display:flex;flex-direction:column;gap:13px;min-width:0}
+  .panel{
+    position:relative;background:var(--panel);border:1px solid var(--line);
+    border-radius:5px;overflow:hidden;backdrop-filter:blur(8px);
+    box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 8px 28px rgba(0,0,0,.35);
+  }
+  .panel::before{content:"";display:block;height:2px;
+    background:linear-gradient(90deg,var(--p1),var(--p2),var(--p3),var(--p4));opacity:.85}
+  .panel > h2{
+    margin:0;padding:8px 13px;font-size:11.5px;font-weight:700;color:#aab6cf;
+    border-bottom:1px solid rgba(255,255,255,.07);letter-spacing:.22em;
+    text-shadow:0 0 10px rgba(34,211,238,.25);
+  }
+  .panel > h2::before{content:"";display:inline-block;width:7px;height:7px;margin-right:8px;
+    background:linear-gradient(135deg,var(--p2),var(--p1));
+    box-shadow:0 0 8px rgba(34,211,238,.6);vertical-align:1px}
+  .panel .body{padding:11px 13px}
+  .bot{border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:10px 11px;margin-bottom:10px;
+    background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.01))}
+  .bot:last-child{margin-bottom:0}
+  .bot .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .bot .nm{font-weight:700;letter-spacing:.05em}
+  .dot{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:6px;
+    image-rendering:pixelated}
+  .on{background:var(--ok);box-shadow:0 0 9px rgba(52,211,153,.8)}
+  .off{background:#5b6472}
+  .warnDot{background:var(--warn);box-shadow:0 0 9px rgba(251,191,36,.8)}
+  .kv{color:var(--muted);font-size:12px;margin-top:3px}
+  .mono{font-family:Consolas,monospace}
+  label{display:block;color:var(--muted);font-size:11.5px;margin:0 0 3px;letter-spacing:.06em}
+  input,select,textarea,button{font:inherit;color:var(--text)}
+  input,select,textarea{width:100%;padding:6px 8px;border:1px solid rgba(255,255,255,.13);
+    border-radius:3px;background:rgba(0,0,0,.35);outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--p2);
+    box-shadow:0 0 0 1px rgba(34,211,238,.35)}
+  textarea{resize:vertical}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  /* MC 石质按钮：上亮下暗内嵌 + 按下位移 */
+  .btn{
+    padding:6px 13px;cursor:pointer;border-radius:3px;color:#e7edf8;letter-spacing:.04em;
+    background:#3a4356;border:1px solid #12161f;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 -3px 0 rgba(0,0,0,.38);
+    transition:filter .12s;
+  }
+  .btn:hover{filter:brightness(1.14)}
+  .btn:active{transform:translateY(1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.18), inset 0 -2px 0 rgba(0,0,0,.38)}
+  .btn.p{
+    background:linear-gradient(180deg,#8b5cf6,#6d4fe0);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35), inset 0 -3px 0 rgba(0,0,0,.4),
+               0 0 14px rgba(139,92,246,.4);
+  }
+  .btn.s{padding:3px 9px;font-size:11.5px}
+  .feed{max-height:230px;overflow:auto;font-size:12px}
+  .feed div{padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+  .feed .t{color:#5d6880;margin-right:6px}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+  .empty{color:var(--muted);padding:6px 0}
+  .res{white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px}
+  .rowbtn{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px;align-items:center}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:rgba(139,92,246,.35);border:2px solid #0b0e14;border-radius:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+  #map{border:1px solid rgba(34,211,238,.35);box-shadow:0 0 18px rgba(34,211,238,.15)}
+  .baggrid{display:grid;grid-template-columns:repeat(9,56px);gap:5px}
+  /* ---- MC 快捷栏风格物品槽 ---- */
+  .hotbar{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+  .slot{width:56px;height:56px;border:2px solid #2b2f3a;border-radius:2px;position:relative;cursor:pointer;
+    background:rgba(18,20,26,.92);
+    box-shadow:inset 2px 2px 0 rgba(255,255,255,.07), inset -2px -2px 0 rgba(0,0,0,.55)}
+  .slot:hover{border-color:var(--p2)}
+  .slot.sel{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.45), inset 0 0 14px rgba(34,211,238,.4)}
+  .slot.dropzone{border-style:dashed;border-color:rgba(34,211,238,.45)}
+  .slot.dropzone:hover{border-style:solid;border-color:var(--p2);box-shadow:0 0 12px rgba(34,211,238,.45)}
+  .slot[draggable="true"]:active{cursor:grabbing}
+  .drag-ghost{position:fixed;z-index:9999;pointer-events:none;opacity:.9;transform:scale(.9);
+    border:2px solid var(--p2);border-radius:2px;background:rgba(18,20,26,.95);
+    box-shadow:0 0 18px rgba(34,211,238,.6)}
+  .drag-ghost img{width:100%;height:100%;object-fit:contain;padding:3px;box-sizing:border-box;image-rendering:pixelated}
+  .slot.drag-over{border-color:var(--p2) !important;box-shadow:0 0 16px rgba(34,211,238,.75) !important}
+  .slot.dragging{opacity:.3}
+  .slot{cursor:grab}
+  .slot img{width:100%;height:100%;object-fit:contain;padding:3px;box-sizing:border-box;image-rendering:pixelated}
+  .slot .fb{position:absolute;inset:3px;display:flex;align-items:center;justify-content:center;
+    font-size:10.5px;font-weight:700;color:#fff;text-align:center;overflow:hidden;word-break:break-all}
+  .slot .cnt{position:absolute;right:3px;bottom:0;font:bold 12px Consolas;color:#fff;
+    text-shadow:2px 2px 0 #000,-1px -1px 0 #000;pointer-events:none}
+  .slot .idx{position:absolute;left:3px;top:0;font:9.5px Consolas;color:#6e7a90}
+  .hands{display:flex;gap:22px;margin-top:14px;flex-wrap:wrap;align-items:center}
+  .hand{display:flex;align-items:center;gap:9px}
+  .hand .lbl{color:var(--muted);font-size:11px;letter-spacing:.14em}
+  .hand .slot{width:50px;height:50px}
+  /* ---- BOT 背包 ---- */
+  .invgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:5px}
+  .islot{border:1px solid rgba(255,255,255,.10);border-radius:3px;padding:4px 6px;cursor:pointer;
+    background:rgba(0,0,0,.28);font-size:10.5px;line-height:1.45}
+  .islot:hover{border-color:var(--p2);box-shadow:0 0 8px rgba(34,211,238,.35)}
+  .islot .in{color:#cdd8ec;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .islot .ic{color:var(--muted)}
+  .islot.held{border-color:var(--ok);box-shadow:0 0 10px rgba(52,211,153,.45)}
+  .islot .mark{color:var(--p4)}
+  .xyz{font-family:Consolas,monospace;letter-spacing:.04em;color:#9fe8ff;text-shadow:0 0 8px rgba(34,211,238,.35)}
+  /* ---- 视图与主面板布局 ---- */
+  .view{display:block;flex:1;min-height:0;overflow:auto}
+  .view.hidden{display:none !important}
+  .view:not(.home){padding:12px}
+  .home{display:grid;grid-template-columns:305px minmax(0,1fr) 400px;gap:12px;padding:12px;
+    height:100%;box-sizing:border-box;overflow:hidden}
+  .home .col{display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
+  .panel.fill{flex:1;min-height:0;display:flex;flex-direction:column}
+  .panel.fill>.body{flex:1;min-height:0;display:flex;flex-direction:column}
+  .panel.fill .feed{flex:1;min-height:0;overflow:auto}
+  .onlineBig{font-size:22px;font-weight:700;color:var(--ok);letter-spacing:.06em;
+    text-shadow:0 0 14px rgba(52,211,153,.45);margin-bottom:8px}
+  .navbtns{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  /* ---- API 设置页 ---- */
+  .hidden{display:none !important}
+  .providers{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+  .pcard{border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:11px 12px;
+    background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.01))}
+  .pcard .head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .badge{padding:0 7px;border-radius:3px;background:rgba(139,92,246,.25);color:#c4b5fd;
+    font-size:10.5px;border:1px solid rgba(139,92,246,.4)}
+  .frm{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .frm .full{grid-column:1/-1}
+  .modellist{margin-top:6px;max-height:190px;overflow:auto;border:1px solid rgba(255,255,255,.12);
+    border-radius:3px;background:rgba(0,0,0,.32)}
+  .modellist div{padding:5px 9px;cursor:pointer;font-size:12px;
+    border-bottom:1px solid rgba(255,255,255,.05)}
+  .modellist div:last-child{border-bottom:none}
+  .modellist div:hover{background:rgba(34,211,238,.16);color:#fff}
+  .modellist .mname{color:#7f8ba3;font-size:11px;margin-left:6px}
+  /* ---- 响应式 ---- */
+  @media (max-width:1200px){
+    body{height:auto;overflow:auto}
+    .home{grid-template-columns:minmax(0,1fr);height:auto;overflow:visible}
+    .panel.fill{flex:none}
+    .panel.fill .feed{max-height:340px}
+    #map{max-width:100%}
+  }
+  @media (max-width:900px){
+    .providers{grid-template-columns:1fr}
+    .frm{grid-template-columns:1fr}
+    header{flex-wrap:wrap}
+  }
+  /* ---- 令牌登录浮层 ---- */
+  .login-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+    background:rgba(6,8,13,.82);backdrop-filter:blur(8px)}
+  .login-overlay.hidden{display:none}
+  .login-box{width:min(420px,92vw);position:relative;overflow:hidden;border-radius:6px;padding:26px 24px 22px;
+    border:1px solid var(--line);
+    background:radial-gradient(600px 300px at 50% -40%, rgba(139,92,246,.18), transparent 70%), var(--panel);
+    box-shadow:0 0 0 1px rgba(0,0,0,.4), 0 18px 60px rgba(0,0,0,.6)}
+  .login-box::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,var(--p1),var(--p2),var(--p3),var(--p4));opacity:.9}
+  .lb-logo{width:34px;height:34px;margin:0 auto 12px;border-radius:2px;
+    background:linear-gradient(#4ade80 0 45%, #8a6642 45% 100%);
+    box-shadow:0 0 16px rgba(74,222,128,.5), inset 0 0 0 1px rgba(0,0,0,.5)}
+  .login-box h2{margin:0 0 6px;text-align:center;font-size:16px;font-weight:700;letter-spacing:.1em;
+    background:linear-gradient(90deg,#c4b5fd,#7dd3fc);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lb-sub{margin:0 0 16px;text-align:center;color:var(--muted);font-size:12px}
+  .login-box label{margin-bottom:5px}
+  .login-box input{margin-bottom:10px}
+  .lb-err{color:var(--bad);font-size:12px;min-height:16px;margin:-4px 0 10px;text-align:center}
+  .login-box .btn{width:100%;padding:9px;font-size:14px}
+  .lb-hint{margin:14px 0 0;text-align:center;color:var(--muted);font-size:11px;opacity:.8}
+</style>
+</head>
+<body>
+<div id="loginOverlay" class="login-overlay hidden">
+  <div class="login-box">
+    <div class="lb-logo"></div>
+    <h2>控制台需要访问令牌</h2>
+    <p class="lb-sub">公网 / 远程访问请输入 <b>CONSOLE_TOKEN</b> 才能进入。</p>
+    <label for="tokenInput">访问令牌 Token</label>
+    <input id="tokenInput" type="password" placeholder="粘贴 start.sh 里的 CONSOLE_TOKEN" autocomplete="off"
+      onkeydown="if(event.key==='Enter')submitLogin()">
+    <div id="loginErr" class="lb-err"></div>
+    <button class="btn p" onclick="submitLogin()">进入控制台</button>
+    <p class="lb-hint">令牌仅保存在本机浏览器（localStorage），不会上传到服务器。</p>
+  </div>
+</div>
+<header>
+  <h1><span class="logo"></span>MC 多 bot 控制台</h1>
+  <nav class="navbtns">
+    <button class="btn s" onclick="showView('home')">🏠 主页</button>
+    <button class="btn s" onclick="showView('bag')">🎒 背包</button>
+    <button class="btn s" onclick="showView('task')">🚀 派任务</button>
+    <button class="btn s" onclick="showView('scenario')">🧪 场景</button>
+    <button class="btn s" onclick="showView('lang')">💬 语言流</button>
+    <button class="btn s" onclick="showView('status')">📊 状态</button>
+    <button class="btn s" onclick="showView('addbot')">➕ 接入</button>
+    <button class="btn s" onclick="showView('log')">📋 日志</button>
+    <button class="btn s" onclick="showView('settings')">⚙ API</button>
+  </nav>
+  <span style="flex:1"></span>
+  <span class="pill" id="hTime">--:--:--</span>
+  <span class="pill" id="hBots">0 bot</span>
+  <span class="pill" id="hLang">0 条语言</span>
+  <span class="pill" id="hMode"></span>
+  <button class="btn s" onclick="load()">刷新</button>
+</header>
+
+<div id="view-home" class="view home">
+  <!-- 左：BOT 列表 + 运行状态 -->
+  <div class="col">
+    <div class="panel fill">
+      <h2>BOT 列表 · 运行状态</h2>
+      <div class="body">
+        <div class="rowbtn" style="margin-bottom:8px">
+          <button class="btn s" onclick="showView('addbot')">＋ 添加 bot</button>
+        </div>
+        <div id="bots"><div class="empty">尚未注册 bot</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 中：上发言，下实时聊天 -->
+  <div class="col">
+    <div class="panel">
+      <h2>发言（以 bot 身份在服务器说话）</h2>
+      <div class="body">
+        <textarea id="chatIn" rows="2" placeholder="输入内容，Enter 发送，Shift+Enter 换行"
+          style="font-size:13px"></textarea>
+        <div class="rowbtn">
+          <select id="chatBot" style="max-width:150px"></select>
+          <button class="btn p" onclick="sendChat('say')">发公屏</button>
+          <button class="btn" onclick="sendChat('me')">发 /me</button>
+          <span class="kv" id="chatHint"></span>
+        </div>
+        <div class="feed" id="sent" style="max-height:62px;margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="panel fill">
+      <h2>全服聊天（实时）· 下方可对指定 bot 下任务</h2>
+      <div class="body">
+        <input id="chatFilter" placeholder="过滤：玩家名 / 关键字 / @指令" style="margin-bottom:8px">
+        <div class="feed" id="chat"><div class="empty">暂无（需至少一个已接入的连接）</div></div>
+        <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.08);padding-top:10px;flex:none">
+          <div class="rowbtn" style="margin-top:0">
+            <select id="cmdBot" style="max-width:150px"></select>
+            <input id="cmdIn" placeholder="对选中的 bot 下达任务，如：去砍 100 个木头"
+              style="flex:1;min-width:120px">
+            <button class="btn p" onclick="sendCmd()">发送</button>
+          </div>
+          <div class="feed" id="cmdLog" style="flex:none;max-height:110px;margin-top:6px">
+            <div class="empty">选一个 bot，输入任务 → 它会思考、回复并执行</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右：上地图，下在线人数（各 50%） -->
+  <div class="col">
+    <div class="panel fill">
+      <h2>战术地图</h2>
+      <div class="body">
+        <div class="rowbtn" id="mapBots" style="margin-top:0;margin-bottom:6px"></div>
+        <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center">
+          <canvas id="map" width="672" height="672"
+            style="max-width:100%;max-height:100%;border-radius:4px;background:#0d1117;image-rendering:pixelated"></canvas>
+        </div>
+        <div class="kv" id="mapMeta" style="margin-top:6px">等待地图数据…</div>
+        <div class="kv">▲bot 朝向 ｜ ●红敌对 绿动物 蓝玩家 ｜ ◆金=黑色石碑 紫=未知模组方块</div>
+      </div>
+    </div>
+    <div class="panel fill">
+      <h2>服务器在线（实时人数）</h2>
+      <div class="body">
+        <div class="onlineBig" id="srvMeta">读取中…</div>
+        <div class="feed" id="srvPlayers"><div class="empty">读取中…</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 功能页 ===== -->
+<div id="view-bag" class="view hidden">
+  <div class="panel">
+    <h2>BOT 物品栏（主手=热栏选中格 · 副手/盔甲为独立槽）</h2>
+    <div class="body">
+      <div class="rowbtn" style="margin-top:0">
+        <select id="invBot" style="flex:1;min-width:0;max-width:320px"></select>
+        <button class="btn s" onclick="loadInv()">刷新</button>
+        <button class="btn s" onclick="showView('home')">← 返回</button>
+      </div>
+      <div class="kv" style="margin-top:14px;letter-spacing:.16em;color:#9fb0c9">主背包（27 格）</div>
+      <div class="baggrid" id="mainInv" style="margin-top:8px"></div>
+      <div class="kv" style="margin-top:16px;letter-spacing:.16em;color:#9fb0c9">热栏（1-9）</div>
+      <div class="baggrid" id="hotbar" style="margin-top:8px"></div>
+      <div class="hands">
+        <div class="hand"><span class="lbl" id="mainHandLbl">主手</span>
+          <div class="slot dropzone" id="mainHand" data-dest="hand" title="把物品拖到这里 → 主手"></div>
+          <span class="kv" id="mainHandName">—</span></div>
+        <div class="hand"><span class="lbl">副手</span>
+          <div class="slot dropzone" id="offHand" data-dest="off-hand" title="把物品拖到这里 → 副手"></div>
+          <span class="kv" id="offHandName">—</span></div>
+      </div>
+      <div class="kv" style="margin-top:8px;color:#7f8ba3">
+        说明：主手槽是热栏选中格的镜像（同一件物品，不额外占位）；副手/盔甲是独立槽，拖过去原格会空。
+      </div>
+      <div class="hands" style="margin-top:12px">
+        <div class="hand"><span class="lbl">盔甲</span>
+          <div id="armorSlots" style="display:flex;gap:6px"></div></div>
+      </div>
+      <div class="hands" style="margin-top:12px">
+        <div class="hand"><span class="lbl">饰品栏</span>
+          <div id="accSlots" style="display:flex;gap:6px"></div>
+          <span class="kv">模组饰品槽（协议层读不到，仅占位）</span></div>
+      </div>
+      <div class="rowbtn" style="margin-top:12px">
+        <button class="btn p" onclick="useItem(false)">使用主手</button>
+        <button class="btn" onclick="useItem(true)">使用副手</button>
+        <span class="kv" id="useRes"></span>
+        <span class="kv">（右键使用：吃东西/放方块/激活物品）</span>
+      </div>
+      <div class="kv" id="invHeld" style="margin-top:14px">手持：—</div>
+    </div>
+  </div>
+</div>
+
+<div id="view-task" class="view hidden">
+  <div class="panel">
+    <h2>派任务</h2>
+    <div class="body">
+      <div class="rowbtn" style="margin-top:0;margin-bottom:10px">
+        <button class="btn s" onclick="showView('home')">← 返回</button>
+        <span class="kv">统一语义动作，下发后回读状态验证</span>
+      </div>
+      <div class="grid2">
+        <div><label>目标 bot</label><select id="tBot"></select></div>
+        <div><label>动作</label><select id="tVerb" onchange="renderArgs()"></select></div>
+      </div>
+      <div id="tArgs" style="margin-top:10px"></div>
+      <div class="rowbtn">
+        <button class="btn p" onclick="sendTask()">下发</button>
+        <button class="btn" onclick="sendRawSay()">以该 bot 身份发言</button>
+      </div>
+      <div class="res" id="tRes"></div>
+    </div>
+  </div>
+</div>
+
+<div id="view-scenario" class="view hidden">
+  <div class="panel">
+    <h2>互测场景</h2>
+    <div class="body">
+      <div class="rowbtn" style="margin-top:0">
+        <button class="btn s" onclick="showView('home')">← 返回</button>
+        <span class="kv">悬停按钮看说明</span>
+      </div>
+      <div class="rowbtn" id="scList" style="margin-top:10px"></div>
+      <div class="res" id="scRes">选一个场景，跑完看结果。</div>
+    </div>
+  </div>
+</div>
+
+<div id="view-lang" class="view hidden">
+  <div class="panel">
+    <h2>语言流（bot 之间互相指挥）</h2>
+    <div class="body">
+      <div class="rowbtn" style="margin-top:0;margin-bottom:8px">
+        <button class="btn s" onclick="showView('home')">← 返回</button>
+        <span class="kv">语法：@目标 动词 参数（如 @Bot-B move_to 120 -30）</span>
+      </div>
+      <div class="feed" id="lang" style="max-height:calc(100vh - 200px)"><div class="empty">暂无</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="view-status" class="view hidden">
+  <div class="panel">
+    <h2>运行状态</h2>
+    <div class="body">
+      <div class="rowbtn" style="margin-top:0;margin-bottom:10px">
+        <button class="btn s" onclick="showView('home')">← 返回</button>
+      </div>
+      <div class="kv" id="runMeta" style="font-size:14px;margin-bottom:8px">读取中…</div>
+      <div class="kv" id="runSys">—</div>
+    </div>
+  </div>
+</div>
+
+<div id="view-addbot" class="view hidden">
+  <div class="panel">
+    <h2>接入新 BOT</h2>
+    <div class="body" style="max-width:520px">
+      <div class="rowbtn" style="margin-top:0;margin-bottom:10px">
+        <button class="btn s" onclick="showView('home')">← 返回</button>
+      </div>
+      <label>ID</label><input id="nId" placeholder="proto-2">
+      <label style="margin-top:8px">名称</label><input id="nName" placeholder="Bot-B">
+      <label style="margin-top:8px">类型</label>
+      <select id="nKind"><option value="protocol">协议 bot（8801）</option>
+        <option value="client">客户端 bot（8780）</option></select>
+      <label style="margin-top:8px">地址</label><input id="nBase" placeholder="http://127.0.0.1:8803">
+      <label style="margin-top:8px">游戏账号（开进程必需）</label><input id="nAcct" placeholder="bot_one3">
+      <label style="margin-top:8px">游戏口令（开进程必需）</label><input id="nPw" placeholder="AuthMe /login 的口令">
+      <label style="margin-top:8px">Token（客户端 bot 可选）</label>
+      <input id="nToken" placeholder="X-AI-Token">
+      <p class="kv" style="margin-top:8px">端口从「地址」里自动取（:8803 → 8803）。不填账号口令也能登记，但「开进程」会拒绝。</p>
+      <div class="rowbtn"><button class="btn p" onclick="addBot()">注册</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="view-log" class="view hidden">
+  <div class="panel">
+    <h2>操作日志</h2>
+    <div class="body">
+      <div class="rowbtn" style="margin-top:0;margin-bottom:8px">
+        <button class="btn s" onclick="showView('home')">← 返回</button>
+      </div>
+      <div class="feed" id="log" style="max-height:calc(100vh - 200px)"><div class="empty">暂无</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="view-settings" class="view hidden">
+  <div class="panel">
+    <h2>API 提供商</h2>
+    <div class="body">
+      <div class="rowbtn" style="margin-top:0">
+        <button class="btn s" onclick="showView('home')">← 返回</button>
+        <button class="btn p" onclick="openProviderForm()">+ 新增提供商</button>
+        <span class="kv">协议：OpenAI 兼容 / Anthropic Messages ｜ 用量为本地统计</span>
+      </div>
+      <div class="providers" id="provList" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <div class="panel hidden" id="providerForm">
+    <h2 id="pfTitle">新增提供商</h2>
+    <div class="body">
+      <div class="frm">
+        <div><label>ID（唯一）</label><input id="pfId" placeholder="deepseek"></div>
+        <div><label>名称</label><input id="pfName" placeholder="DeepSeek"></div>
+        <div><label>协议</label>
+          <select id="pfProtocol">
+            <option value="openai">OpenAI 兼容</option>
+            <option value="anthropic">Anthropic</option>
+          </select></div>
+        <div class="full"><label>API 端点（完整 chat 地址）</label>
+          <input id="pfBase" placeholder="https://api.deepseek.com/chat/completions"></div>
+        <div class="full"><label>API Key（已隐藏，留空/不改则沿用原密钥）</label>
+          <input id="pfKey" type="password" placeholder="sk-..." autocomplete="off"></div>
+        <div><label>模型（填完上面点「获取」）</label>
+          <div style="display:flex;gap:6px">
+            <input id="pfModel" placeholder="deepseek-chat" style="flex:1;min-width:0">
+            <button class="btn s" onclick="fetchModels()" title="从上游拉取模型列表">获取</button>
+          </div>
+          <div id="pfModels" class="modellist hidden"></div>
+        </div>
+        <div><label>上下文窗口（tokens，默认 1M）</label>
+          <input id="pfCtx" value="1000000" placeholder="1000000"></div>
+        <div><label>思考程度（reasoning）</label>
+          <select id="pfEffort">
+            <option value="">默认（不传参数）</option>
+            <option value="low">低（快，省 token）</option>
+            <option value="medium">中</option>
+            <option value="high">高（慢，想得深）</option>
+          </select></div>
+        <div class="full"><label>余额端点（可选，自动查余额用，留空按域名适配）</label>
+          <input id="pfBalance" placeholder="https://.../balance"></div>
+        <div class="full"><label><input type="checkbox" id="pfEnabled" checked style="width:auto"> 启用</label></div>
+      </div>
+      <div class="rowbtn">
+        <button class="btn p" onclick="saveProvider()">保存</button>
+        <button class="btn" onclick="closeProviderForm()">取消</button>
+      </div>
+      <div class="res" id="pfRes"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = (v, d=1) => (v === null || v === undefined || isNaN(+v)) ? '—' : (+v).toFixed(d);
+// 可选鉴权：控制台带 --token 启动时，用 http://host:8900/?t=你的token 打开一次，或登录框输入
+let CT = (() => {
+  const t = new URLSearchParams(location.search).get('t');
+  if (t) localStorage.setItem('ct', t);
+  return localStorage.getItem('ct') || '';
+})();
+const authQ = p => CT ? `${p}${p.includes('?') ? '&' : '?'}t=${encodeURIComponent(CT)}` : p;
+const authH = () => CT ? {'X-Console-Token': CT} : {};
+let STATE = {bots:[],log:[],lang:[],verbs:[]};
+
+// ---- 令牌登录浮层 ----
+let _loginOpen = false;
+function showLogin(msg){
+  if (_loginOpen) return;            // 已开着就不重复触发，避免清空正在输入的口令
+  _loginOpen = true;
+  if (msg) document.getElementById('loginErr').textContent = msg;
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  const inp = document.getElementById('tokenInput');
+  inp.value = '';
+  setTimeout(() => inp.focus(), 30);
+}
+function submitLogin(){
+  const v = (document.getElementById('tokenInput').value || '').trim();
+  if (!v){ document.getElementById('loginErr').textContent = '请输入令牌'; return; }
+  CT = v;
+  localStorage.setItem('ct', v);
+  _loginOpen = false;
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('loginErr').textContent = '';
+  load();
+}
+// 统一 GET（带 401→登录框）
+async function apiGet(url){
+  const r = await fetch(authQ(url));
+  if (r.status === 401){ showLogin('令牌缺失或错误，请输入 CONSOLE_TOKEN'); throw new Error('unauthorized'); }
+  return r;
+}
+
+let LOAD_BUSY = false;
+async function load(){
+  if (_loginOpen) return;            // 登录框开着时暂停轮询，避免反复弹框
+  if (document.hidden) return;       // 手机切走/息屏时别再轮询，省电也省 CPU
+  if (LOAD_BUSY) return;             // 上一拍还没回来就跳过：否则请求越堆越多，全卡在"连接中"
+  LOAD_BUSY = true;
+  const ac = new AbortController();
+  const tid = setTimeout(() => ac.abort(), 6000);
+  try{
+    const r = await fetch(authQ('/api/state'), { signal: ac.signal });
+    if (r.status === 401) { showLogin('令牌缺失或错误，请输入 CONSOLE_TOKEN'); return; }
+    STATE = await r.json();
+    render();
+  }catch(e){
+    document.getElementById('hTime').textContent = '连接失败（控制台没启动？）';
+  }finally{
+    clearTimeout(tid);
+    LOAD_BUSY = false;
+  }
+}
+
+function render(){
+  document.getElementById('hTime').textContent = STATE.ts || '--';
+  document.getElementById('hBots').textContent = STATE.bots.length + ' bot';
+  document.getElementById('hLang').textContent = (STATE.lang||[]).length + ' 条语言';
+
+  const bb = document.getElementById('bots');
+  bb.innerHTML = STATE.bots.length ? STATE.bots.map(b=>{
+    const on = b.online;
+    // 三态：离线灰 / 在线绿 / 在线但未登录=重连中（黄）
+    const stt = !on
+      ? { t: '离线', c: '#5b6472' }
+      : (b.authed === false
+          ? { t: '重连中' + (b.reconnects ? ' ' + b.reconnects : ''), c: '#fbbf24' }
+          : { t: '在线', c: '#34d399' });
+    const p = b.position || {};
+    const pos = (p.x===undefined||p.x===null) ? '—' : `${num(p.x,1)}, ${num(p.y,1)}, ${num(p.z,1)}`;
+    return `<div class="bot">
+      <div class="row"><span class="nm"><span class="dot ${on ? (b.authed===false?'warnDot':'on') : 'off'}"></span>${esc(b.name||b.id)}</span>
+        <span><span class="pill" style="color:${stt.c}">${esc(stt.t)}</span>
+        <span class="pill">${esc(b.kind)}</span>${STATE.manage ? `<span class="pill" style="color:${b.proc?'#34d399':'#5b6472'}">进程${b.proc?'运行':'停止'}</span>` : ''}</span></div>
+      <div class="kv">坐标 <span class="xyz">${pos}</span> ｜ 血 ${num(b.health,0)} ｜ 饥饿 ${num(b.food,0)}</div>
+      <div class="kv">模式 ${b.mode ?? '—'} ｜ <b style="color:#c4b5fd">等级 ${b.experience ? (b.experience.level ?? 0) : '—'}（${b.experience ? (b.experience.points ?? 0) : 0} 点）</b> ｜ 登录 ${b.authed === true ? '✓' : (b.authed === false ? '✗' : '—')}</div><div class="kv">${esc(b.base)}</div>
+      ${b.error?`<div class="kv bad">${esc(b.error)}</div>`:''}
+      ${b.last_action?`<div class="kv">最近：${esc(b.last_action)}</div>`:''}
+      ${STATE.readonly ? '' : `<div class="rowbtn">
+        <button class="btn s" onclick="quick('${esc(b.id)}','stop')">停止</button>
+        <button class="btn s" onclick="quick('${esc(b.id)}','eat')">进食</button>
+        ${STATE.manage ? (b.proc
+          ? `<button class="btn s" onclick="procBot('${esc(b.id)}','stop')">关进程</button>`
+          : `<button class="btn s" onclick="procBot('${esc(b.id)}','start')">开进程</button>`) : ''}
+        <button class="btn s" onclick="delBot('${esc(b.id)}','${esc(b.name||b.id)}')">移除</button>
+      </div>`}
+    </div>`;
+  }).join('') : '<div class="empty">尚未注册 bot</div>';
+
+  const sel = document.getElementById('tBot');
+  const keep = sel.value;
+  sel.innerHTML = STATE.bots.map(b=>`<option value="${esc(b.id)}">${esc(b.name||b.id)}</option>`).join('');
+  if(keep) sel.value = keep;
+  syncSel('chatBot'); syncSel('cmdBot');
+  // 地图 bot 切换按钮
+  if (!MAP_BOT && STATE.bots.length) MAP_BOT = STATE.bots[0].id;
+  const mbEl = document.getElementById('mapBots');
+  if (mbEl) mbEl.innerHTML = STATE.bots.map(b =>
+    `<button class="btn s ${b.id === MAP_BOT ? 'p' : ''}" onclick="setMapBot('${esc(b.id)}')"
+      title="看 ${esc(b.name || b.id)} 周围的地图">${esc(b.name || b.id)}</button>`).join('');
+
+  document.getElementById('hMode').textContent = STATE.readonly ? '只读模式' : '可写模式';
+  const b0 = (STATE.bots || [])[0] || {};
+  const ping = (b0.ping_ms != null) ? b0.ping_ms + ' ms' : '—';
+  const mem = b0.mem_mb != null ? b0.mem_mb + ' MB' : '—';
+  const up = b0.uptime_s != null ? (b0.uptime_s >= 3600 ? Math.floor(b0.uptime_s/3600)+'时'+Math.floor(b0.uptime_s%3600/60)+'分' : Math.floor(b0.uptime_s/60)+'分'+b0.uptime_s%60+'秒') : '—';
+  const rm = document.getElementById('runMeta');
+  if (rm) rm.textContent = `服务器延迟 ${ping} ｜ bot 内存 ${mem} ｜ 在线时长 ${up}`;
+  const rs = document.getElementById('runSys');
+  if (rs) { const sy = STATE.sys;
+    rs.textContent = sy ? `系统可用内存 ${sy.ram_avail_gb} GB ｜ 内存负载 ${sy.ram_load}% ｜ 刷新间隔：地图 1s / 状态 2s` : '—'; }
+  document.getElementById('hMode').style.color = STATE.readonly ? 'var(--warn)' : 'var(--muted)';
+
+  const vs = document.getElementById('tVerb');
+  const list = STATE.readonly ? (STATE.ro_verbs || []) : (STATE.verbs || []);
+  const key = list.join(',');
+  if(vs.dataset.key !== key){
+    vs.innerHTML = list.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    vs.dataset.key = key;
+    renderArgs();
+  }
+
+  const cf = (document.getElementById('chatFilter').value || '').trim().toLowerCase();
+  let crows = STATE.chat || [];
+  if (cf) crows = crows.filter(x =>
+    (`${x.text} ${x.who||''} ${x.src||''}`).toLowerCase().includes(cf));
+  const ch = document.getElementById('chat');
+  ch.innerHTML = crows.length ? crows.slice().reverse().slice(0,120).map(x=>{
+    const body = esc(x.text).replace(/@\S+/g, m => `<b class="warn">${m}</b>`);
+    return `<div><span class="t">${esc(x.ts)}</span>
+      <b>${esc(x.who || '系统')}</b>${x.who ? `<span class="pill" style="font-size:10.5px">${esc(x.src)}</span>` : ''}
+      ${body}</div>`;
+  }).join('') : `<div class="empty">${cf ? '没有匹配的聊天' : '暂无（需至少一个已接入的连接）'}</div>`;
+
+  const lg = document.getElementById('lang');  lg.innerHTML = (STATE.lang||[]).length ? STATE.lang.slice().reverse().map(x=>
+    `<div><span class="t">${esc(x.ts)}</span><b>${esc(x.from)}</b> → <b>${esc(x.to)}</b>
+     <span class="mono">${esc(x.verb)} ${esc(x.args)}</span>
+     <span class="${String(x.result).startsWith('ok')?'ok':'bad'}">${esc(x.result)}</span></div>`).join('')
+    : '<div class="empty">暂无</div>';
+
+  const lo = document.getElementById('log');
+  lo.innerHTML = (STATE.log||[]).length ? STATE.log.slice().reverse().map(x=>
+    `<div><span class="t">${esc(x.ts)}</span><span class="mono">${esc(x.kind)}</span> ${esc(x.msg)}</div>`).join('')
+    : '<div class="empty">暂无</div>';
+}
+
+function renderArgs(){
+  const v = document.getElementById('tVerb').value;
+  const box = document.getElementById('tArgs');
+  if(v==='move_to') box.innerHTML = `<div class="grid2">
+    <div><label>x</label><input id="aX" value="0"></div>
+    <div><label>z</label><input id="aZ" value="0"></div></div>`;
+  else if(v==='work') box.innerHTML = `<label>模式</label><select id="aMode">
+    <option value="log">log 砍树</option><option value="stone">stone 挖石</option>
+    <option value="patrol">patrol 巡逻</option><option value="stop">stop 停工</option></select>`;
+  else if(v==='follow') box.innerHTML = `<label>玩家名</label><input id="aPlayer" placeholder="玩家名或 bot 名">`;
+  else if(v==='dig') box.innerHTML = `<label>目标方块（留空=挖准星方块）</label>
+    <input id="aBlock" placeholder="oak_log">`;
+  else if(v==='say'||v==='chat_cmd') box.innerHTML = `<label>文本</label>
+    <textarea id="aText" rows="2" placeholder="要发送的内容"></textarea>`;
+  else if(v==='equip') box.innerHTML = `<div class="grid2">
+    <div><label>槽位 slot（二选一）</label><input id="aSlot" placeholder="36（热栏第 1 格）"></div>
+    <div><label>物品名（二选一）</label><input id="aEname" placeholder="bread"></div></div>`;
+  else box.innerHTML = `<div class="kv">该动作无参数</div>`;
+}
+
+function args(){
+  const v = document.getElementById('tVerb').value;
+  const g = id => (document.getElementById(id)||{}).value;
+  if(v==='move_to') return {x:parseFloat(g('aX')||0), z:parseFloat(g('aZ')||0)};
+  if(v==='work') return {mode:g('aMode')};
+  if(v==='follow') return {player:g('aPlayer')};
+  if(v==='dig') return g('aBlock') ? {block:g('aBlock')} : {};
+  if(v==='say'||v==='chat_cmd') return {text:g('aText')||''};
+  if(v==='equip') return g('aSlot') !== '' ? {slot:Number(g('aSlot'))} : {name:g('aEname')};
+  return {};
+}
+
+async function post(url, body){
+  // 15s 硬超时：服务器卡住时别让调用方永远挂着（会把 BUSY 标志永久占死）
+  const ac = new AbortController();
+  const tid = setTimeout(() => ac.abort(), 15000);
+  try{
+    const r = await fetch(authQ(url),{method:'POST',headers:{'Content-Type':'application/json',...authH()},
+      body:JSON.stringify(body), signal: ac.signal});
+    if (r.status === 401){ showLogin('令牌失效，请重新输入'); throw new Error('unauthorized'); }
+    return await r.json();
+  } finally { clearTimeout(tid); }
+}
+
+async function sendTask(){
+  const bot = document.getElementById('tBot').value;
+  const verb = document.getElementById('tVerb').value;
+  const res = await post('/api/act',{bot,verb,args:args()});
+  document.getElementById('tRes').textContent =
+    (res.ok?'✓ 已下发':'✗ '+(res.result&&res.result.error||JSON.stringify(res.result)));
+  load();
+}
+
+async function sendRawSay(){
+  const bot = document.getElementById('tBot').value;
+  const t = prompt('以该 bot 身份在游戏内发言：','@Bot-B move_to 10 10');
+  if(!t) return;
+  const res = await post('/api/say',{bot,text:t});
+  document.getElementById('tRes').textContent = res.ok?'✓ 已发言':'✗ '+JSON.stringify(res.result);
+  load();
+}
+
+function quick(id,verb){ post('/api/act',{bot:id,verb,args:{}}).then(load); }
+
+async function addBot(){
+  const g = id => document.getElementById(id).value.trim();
+  const bot = {id:g('nId'),name:g('nName')||g('nId'),kind:g('nKind'),base:g('nBase'),enabled:true};
+  if(!bot.id||!bot.base){ alert('ID 与地址必填'); return; }
+  // 端口：从 base 里取（http://127.0.0.1:8803 → 8803），开进程要靠它认领自己的桥
+  const m = bot.base.match(/:(\d{2,5})\/?$/);
+  if (m) bot.bridge_port = parseInt(m[1], 10);
+  else { alert('地址里没写端口，形如 http://127.0.0.1:8803'); return; }
+  if (g('nAcct')) bot.account = g('nAcct');
+  if (g('nPw')) bot.password = g('nPw');
+  if(g('nToken')) bot.token = g('nToken');
+  const dup = (STATE.bots||[]).find(b => b.id !== bot.id && b.base === bot.base);
+  if (dup && !confirm('地址 ' + bot.base + ' 已被「' + (dup.name||dup.id) + '」占用，仍要添加？')) return;
+  if (!bot.account || !bot.password){
+    if (!confirm('没填账号/口令：这只 bot 只能看，不能「开进程」。继续？')) return;
+  }
+  const r = await post('/api/bots',{bot});
+  if (r && r.ok){
+    ['nId','nName','nBase','nAcct','nPw','nToken'].forEach(k=>{ const el=document.getElementById(k); if(el) el.value=''; });
+    showView('home');
+  } else {
+    alert('注册失败：' + ((r && r.error) || '未知'));
+  }
+  load();
+}
+
+async function delBot(id, name){
+  if(!confirm('从控制台移除「'+name+'」？\n\n只删配置（bots.json），不会 kill 那个 bot 进程。')) return;
+  const r = await post('/api/bots/remove',{id});
+  if (r && r.ok){ document.getElementById('tRes').textContent = '✓ 已移除 ' + name; }
+  else { alert('移除失败：' + ((r && r.error) || JSON.stringify(r))); }
+  load();
+}
+
+async function procBot(id, action){
+  const verb = action === 'start' ? '启动' : '停止';
+  if (action === 'stop' && !confirm('强制结束这只 bot 的进程？')) return;
+  const r = await post('/api/bots/' + action, {id});
+  if (!(r && r.ok)){
+    alert(verb + '失败：' + ((r && (r.error || (r.result && r.result.error))) || '未知'));
+  }
+  setTimeout(load, action === 'start' ? 2500 : 800);
+}
+
+async function runSc(name){
+  const out = document.getElementById('scRes');
+  out.textContent = '运行中…';
+  const r = await post('/api/scenario',{name});
+  out.textContent = (r.ok?'✓ ':'✗ ') + (r.note||'') + '\n' + (r.steps||[]).join('\n');
+  load();
+}
+
+let MAP = null;
+
+const BLOCK_COLOR = (n) => {
+  const s = String(n || "");
+  if (/water|ice/.test(s)) return "#2f6fa8";
+  if (/grass_block|moss|grass/.test(s)) return "#5f8f3a";
+  if (/leaves|vine/.test(s)) return "#2f6b34";
+  if (/log|wood|planks|bamboo/.test(s)) return "#8a6642";
+  if (/dirt|podzol|mud|path|farmland/.test(s)) return "#7d5a3c";
+  if (/sand|gravel/.test(s)) return "#cfc08a";
+  if (/snow|powder/.test(s)) return "#e6edf3";
+  if (/lava|magma|fire/.test(s)) return "#d2521f";
+  if (/ore/.test(s)) return "#c8a24a";
+  if (/deepslate|tuff|basalt|blackstone/.test(s)) return "#4a5058";
+  if (/stone|andesite|diorite|granite|calcite|brick|concrete/.test(s)) return "#8b9096";
+  if (/glass/.test(s)) return "#9fd0e0";
+  if (/wool|carpet|concrete/.test(s)) return "#b06a9a";
+  if (s === "sid:897066") return "#ffd166";   // black_sharestone（实测 stateId，名字映射缺失）
+  if (/^sid:/.test(s)) return "#8f7bd8";      // 其他未知模组方块
+  if (/air/.test(s)) return null;
+  let hsh = 0; for (let i=0;i<s.length;i++) hsh = (hsh*31 + s.charCodeAt(i)) % 360;
+  return `hsl(${hsh},28%,46%)`;
+};
+
+function drawMap(){
+  const cv = document.getElementById('map');
+  if (!cv) return;
+  const g = cv.getContext('2d');
+  g.clearRect(0,0,cv.width,cv.height);
+  const meta = document.getElementById('mapMeta');
+  if (!MAP || !MAP.grid){ meta.textContent = '等待地图数据…'; return; }
+  const n = MAP.grid.length, cell = cv.width / n, r = MAP.r;
+  const baseY = MAP.origin.y;
+
+  for (let dz=0; dz<n; dz++){
+    for (let dx=0; dx<n; dx++){
+      const hit = MAP.grid[dz][dx];
+      let col = '#151a21';
+      if (hit){
+        col = BLOCK_COLOR(hit[0]) || '#151a21';
+        const dy = hit[1] - baseY;                 // 相对高度：越高越亮，越低越暗
+        const f = Math.max(0.45, Math.min(1.35, 1 + dy * 0.055));
+        g.globalAlpha = Math.min(1, f);
+        g.fillStyle = col;
+        g.fillRect(Math.floor(dx*cell), Math.floor(dz*cell), Math.ceil(cell), Math.ceil(cell));
+        g.globalAlpha = 1;
+      } else {
+        g.fillStyle = col;
+        g.fillRect(Math.floor(dx*cell), Math.floor(dz*cell), Math.ceil(cell), Math.ceil(cell));
+      }
+    }
+  }
+
+  // 实体（只有每组最近一个带坐标）
+  const b = (STATE.bots || [])[0] || {};
+  for (const grp of (b.entity_groups || [])){
+    const p = grp.nearest && grp.nearest.pos;
+    if (!p) continue;
+    const gx = p.x - MAP.origin.x + r, gz = p.z - MAP.origin.z + r;
+    if (gx < 0 || gz < 0 || gx >= n || gz >= n) continue;
+    const c = grp.type === 'hostile' ? '#e5484d'
+            : grp.type === 'animal'  ? '#46a758'
+            : grp.type === 'player'  ? '#3b82f6' : '#8b949e';
+    g.beginPath();
+    g.arc((gx+0.5)*cell, (gz+0.5)*cell, Math.max(3, cell*0.42), 0, Math.PI*2);
+    g.fillStyle = c; g.fill();
+    g.strokeStyle = '#000'; g.lineWidth = 1; g.stroke();
+    if (grp.type === 'player' && grp.name){
+      g.fillStyle = '#9ecbff'; g.font = 'bold 10px Consolas, monospace';
+      g.fillText(grp.name, (gx+0.5)*cell + 5, (gz+0.5)*cell - 3);
+    }
+  }
+
+  // 黑色共享石碑标记（名字映射缺失 → map_slice 用 sid:897066 占位）
+  for (let dz=0; dz<n; dz++){
+    for (let dx=0; dx<n; dx++){
+      const hit = MAP.grid[dz][dx];
+      if (hit && hit[0] === "sid:897066"){
+        const px=(dx+0.5)*cell, pz=(dz+0.5)*cell;
+        g.beginPath();
+        g.moveTo(px, pz-cell*0.72); g.lineTo(px+cell*0.55, pz);
+        g.lineTo(px, pz+cell*0.72); g.lineTo(px-cell*0.55, pz);
+        g.closePath();
+        g.fillStyle="#ffd166"; g.fill();
+        g.strokeStyle="#000"; g.lineWidth=1.5; g.stroke();
+      }
+    }
+  }
+
+  // bot 自己：中心白箭头，按 yaw 转
+  const yaw = parseFloat(b.yaw ?? 0) * Math.PI / 180;
+  const cx = (r+0.5)*cell, cy = (r+0.5)*cell;
+  const dirx = -Math.sin(yaw), dirz = Math.cos(yaw);   // MC: yaw0=+Z, 90=-X
+  g.save(); g.translate(cx, cy); g.rotate(Math.atan2(dirz, dirx) + Math.PI/2);
+  g.beginPath(); g.moveTo(0, -cell*0.95); g.lineTo(cell*0.62, cell*0.72); g.lineTo(0, cell*0.34); g.lineTo(-cell*0.62, cell*0.72);
+  g.closePath(); g.fillStyle = '#ffffff'; g.fill(); g.strokeStyle = '#000'; g.lineWidth = 1; g.stroke();
+  g.restore();
+
+  meta.textContent = `${b.name || b.id} ｜ 中心 ${MAP.origin.x}, ${MAP.origin.z}（y${baseY}） ｜ 半径 ${r} 格 ｜ 视野 ${b.yaw ?? '?'}° ｜ ${new Date(MAPTS).toLocaleTimeString()}`;
+}
+
+let MAPTS = 0;
+let MAP_BUSY = false;
+let MAP_BOT = '';
+function setMapBot(id){ MAP_BOT = id; MAP = null; drawMap(); loadMap(); }
+async function loadMap(){
+  if (document.hidden) return;
+  const bots = (STATE.bots || []);
+  // 别死认 bots[0]：那一只在重连时地图/在线人数会整块空掉，能换在线的那只就换
+  const b = bots.find(x => x.id === MAP_BOT && x.online) || bots.find(x => x.online);
+  if (!b || !b.online || MAP_BUSY) return;   // 上一帧还没回来就跳过，避免堆请求
+  if (!MAP_BOT) MAP_BOT = b.id;
+  MAP_BUSY = true;
+  try {
+    // radius 14 ≈ 29×29 列（原来 24 → 49×49）。map_slice 是同步扫方块，手机 Node 单线程，
+    // 半径翻倍是 4 倍工作量，直接拖垮 bot 的事件循环 → 掉线/重连。
+    const r = await post('/api/act', { bot: b.id, verb: 'map_slice', args: { radius: 14 } });
+    if (r && r.ok && r.result && r.result.grid){
+      MAP = r.result; MAPTS = Date.now(); drawMap();
+    }
+  } finally { MAP_BUSY = false; }
+}
+
+const SENT = [];
+function renderSent(){
+  const el = document.getElementById('sent');
+  el.innerHTML = SENT.length ? SENT.map(x =>
+    `<div><span class="t">${esc(x.ts)}</span><span class="pill" style="font-size:10.5px">${esc(x.mode)}</span>
+     <span class="${x.ok?'ok':'bad'}">${esc(x.text)}</span></div>`).join('')
+    : '<div class="empty">还没发过话</div>';
+}
+function syncSel(id){
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  const keep = sel.value;
+  sel.innerHTML = (STATE.bots || []).map(b =>
+    `<option value="${esc(b.id)}">${esc(b.name || b.id)}</option>`).join('');
+  if (keep && (STATE.bots || []).some(b => b.id === keep)) sel.value = keep;
+}
+async function sendChat(mode){
+  const el = document.getElementById('chatIn');
+  const t = (el.value || '').trim();
+  const hint = document.getElementById('chatHint');
+  const selB = document.getElementById('chatBot');
+  const b = (STATE.bots || []).find(x => x.id === (selB && selB.value))
+            || (STATE.bots || [])[0];
+  if (!t || !b) return;
+  if (mode === 'say' && t.length > 90) { hint.textContent = '公屏单条限 100 字符，建议 ≤90'; return; }
+  hint.textContent = '发送中…';
+  // 原来 post 抛异常（超时/断连）会直接把这里卡在"发送中…"上，什么信息都不给。
+  let r = null, err = '';
+  try {
+    r = await post('/api/say', { bot: b.id, text: t, mode });
+  } catch (e) {
+    err = (e && e.name === 'AbortError')
+      ? '超时：15s 内 bot 桥没有响应（bot 卡住或被系统冻结）'
+      : ('请求失败：' + ((e && e.message) || e));
+  }
+  SENT.unshift({ ts: new Date().toLocaleTimeString(), mode: mode === 'me' ? '/me' : '公屏', text: t, ok: !!(r && r.ok) });
+  if (SENT.length > 30) SENT.pop();
+  if (r && r.ok) el.value = '';
+  hint.textContent = err || ((r && r.ok) ? '' : ('失败：' + JSON.stringify((r && r.result) || r)));
+  renderSent();
+  setTimeout(load, 600);
+}
+document.addEventListener('keydown', (e) => {
+  if (e.target && e.target.id === 'chatIn' && e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChat('say');
+  }
+});
+
+// ---- 服务器在线 ----
+let PL = null;
+function renderPlayers(){
+  const el = document.getElementById('srvPlayers');
+  if (!el) return;
+  document.getElementById('srvMeta').textContent = PL ? `在线 ${PL.count} 人` : '读取中…';
+  el.innerHTML = (PL && PL.players && PL.players.length)
+    ? PL.players.map(pp => {
+        const where = pp.pos ? ` (${Math.round(pp.pos.x)},${Math.round(pp.pos.z)})` : '';
+        return `<div><span class="dot on" style="background:#3b82f6;box-shadow:none"></span><b>${esc(pp.name)}</b>
+          <span class="kv">ping ${pp.ping ?? '-'}${where}</span></div>`;
+      }).join('') : '<div class="empty">没有人在线</div>';
+}
+let PL_BUSY = false;
+async function loadPlayers(){
+  if (document.hidden || PL_BUSY) return;
+  // 原来固定取 bots[0]：那只重连中就直接 return，右侧永远停在"读取中…"
+  const b = (STATE.bots || []).find(x => x.online);
+  const meta = document.getElementById('srvMeta');
+  if (!b){ if (meta) meta.textContent = '无在线 bot'; return; }
+  PL_BUSY = true;
+  try{
+    const r = await post('/api/act', { bot: b.id, verb: 'players', args: {} });
+    if (r && r.ok && r.result && r.result.players !== undefined){
+      PL = r.result; renderPlayers();
+    } else if (meta){
+      meta.textContent = '读取失败：' + (r && r.result && (r.result.error || r.result.reason) || '未知');
+    }
+  } catch(e){
+  } finally {
+    PL_BUSY = false;
+  }
+}
+
+async function initSc(){
+  const r = await apiGet('/api/scenarios'); const d = await r.json();
+  document.getElementById('scList').innerHTML = d.scenarios.map(s=>
+    `<button class="btn s" title="${esc(s.desc)}" onclick="runSc('${esc(s.name)}')">${esc(s.name)}</button>`).join('')
+    + `<span class="kv" style="margin-left:6px">悬停看说明</span>`;
+}
+
+// ---- BOT 背包（物品栏 + 手持 + 装备交互）----
+let INV = null, INV_BOT = '', INV_BUSY = false;
+function syncInvBot(){
+  const sel = document.getElementById('invBot');
+  if (!sel) return;
+  const bots = (STATE.bots || []).filter(b => b.online);
+  const keep = INV_BOT;
+  sel.innerHTML = bots.length
+    ? bots.map(b => `<option value="${esc(b.id)}">${esc(b.name || b.id)}</option>`).join('')
+    : '<option value="">（无在线 bot）</option>';
+  if (keep && bots.some(b => b.id === keep)) sel.value = keep;
+  else if (bots[0]) { INV_BOT = bots[0].id; sel.value = INV_BOT; }
+}
+async function loadInv(){
+  if (DRAG) return;   // 拖拽中不刷新，避免 DOM 重建打断拖拽
+  if (document.hidden) return;
+  if (INV_BUSY) return;
+  const sel = document.getElementById('invBot');
+  if (sel && sel.value) INV_BOT = sel.value;
+  const b = (STATE.bots || []).find(x => x.id === INV_BOT);
+  if (!b || !b.online){
+    INV = null;
+    document.getElementById('invGrid').innerHTML = '<div class="empty">bot 离线</div>';
+    document.getElementById('invHeld').textContent = '手持：—';
+    return;
+  }
+  INV_BUSY = true;
+  try{
+    const r = await post('/api/act', { bot: INV_BOT, verb: 'inv_list', args: {} });
+    if (r && r.ok) { INV = r.result; renderInv(); }
+  } catch(e) {
+  } finally {
+    INV_BUSY = false;
+  }
+}
+function iconColor(name){
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+  return `hsl(${h},42%,32%)`;
+}
+function slotInner(it){
+  if (!it) return '';
+  const nm = it.displayName || it.name;
+  const base = it.name.split(':').pop();
+  return `<img src="/icons/${encodeURIComponent(base)}.png" alt=""
+      onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <span class="fb" style="display:none;background:${iconColor(it.name)}">${esc(nm.slice(0, 4))}</span>
+    ${it.count > 1 ? `<span class="cnt">${it.count}</span>` : ''}`;
+}
+let DRAG = null;
+const ARMOR_RE = {
+  head:  /(_helmet|_skull|_head|pumpkin)/i,
+  torso: /(_chestplate|elytra|backpack|_chest_)/i,
+  legs:  /_leggings/i,
+  feet:  /_boots/i,
+};
+function armorOk(name, dest){
+  const re = ARMOR_RE[dest];
+  return !re || re.test(name || '');
+}
+function slotDown(e, slot, itemName){
+  if (e.button !== 0) return;           // 只处理左键；右键走 contextmenu
+  e.preventDefault();
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  const ghost = document.createElement('div');
+  ghost.className = 'drag-ghost';
+  ghost.innerHTML = el.innerHTML;
+  ghost.style.width = r.width + 'px';
+  ghost.style.height = r.height + 'px';
+  ghost.style.left = r.left + 'px';
+  ghost.style.top = r.top + 'px';
+  document.body.appendChild(ghost);
+  el.classList.add('dragging');
+  DRAG = { slot, ghost, x0: e.clientX, y0: e.clientY, name: itemName || '' };
+  document.addEventListener('mousemove', dragMove, true);
+  document.addEventListener('mouseup', dragUp, true);
+}
+function dragMove(e){
+  if (!DRAG) return;
+  const r = DRAG.ghost.getBoundingClientRect();
+  DRAG.ghost.style.left = (e.clientX - r.width / 2) + 'px';
+  DRAG.ghost.style.top = (e.clientY - r.height / 2) + 'px';
+  document.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over'));
+  const t = findDest(e.clientX, e.clientY);
+  if (t) t.classList.add('drag-over');
+}
+function findDest(x, y){
+  const el = document.elementFromPoint(x, y);
+  return el ? el.closest('[data-dest],[data-slot]') : null;
+}
+async function dragUp(e){
+  document.removeEventListener('mousemove', dragMove, true);
+  document.removeEventListener('mouseup', dragUp, true);
+  if (!DRAG) return;
+  const moved = Math.hypot(e.clientX - DRAG.x0, e.clientY - DRAG.y0) > 6;
+  const t = findDest(e.clientX, e.clientY);
+  const from = DRAG.slot;
+  const name = DRAG.name;
+  DRAG.ghost.remove();
+  document.querySelectorAll('.drag-over,.dragging').forEach(x => {
+    x.classList.remove('drag-over'); x.classList.remove('dragging');
+  });
+  DRAG = null;
+
+  if (t && t.dataset.dest){
+    const dest = t.dataset.dest;
+    if (!armorOk(name, dest)){
+      alert('游戏规则：该物品不能放进这个槽位\n（头盔/胸甲/护腿/靴只接受对应类型，胸甲可放鞘翅或背包）');
+      return;
+    }
+    await equipSlot(from, dest);
+  } else if (t && t.dataset.slot){
+    const to = Number(t.dataset.slot);
+    if (from !== to) await moveSlot(from, to);
+  } else if (!moved){
+    await equipSlot(from, 'hand');   // 没拖动=单击 → 主手
+  }
+}
+async function moveSlot(from, to){
+  await post('/api/act', { bot: INV_BOT, verb: 'move_slot', args: { from, to } });
+  setTimeout(loadInv, 500);
+}
+async function useItem(offhand){
+  const r = await post('/api/act', { bot: INV_BOT, verb: 'use_item',
+                                     args: { offhand: !!offhand } });
+  const el = document.getElementById('useRes');
+  if (el) el.textContent = (r && r.ok) ? '✓ 已使用' : '✗ 失败';
+  setTimeout(loadInv, 600);
+}
+function slotCell(it, slot, sel){
+  const cls = 'slot' + (sel ? ' sel' : '');
+  if (!it) return `<div class="${cls}" data-slot="${slot}"></div>`;
+  const tip = `${it.displayName || it.name} ×${it.count}（slot ${slot}）\n拖到 主手/副手/盔甲/背包　单击→主手　右键→副手`;
+  return `<div class="${cls}" data-slot="${slot}" title="${esc(tip)}"
+      onmousedown="slotDown(event,${slot},'${esc(it.name)}')"
+      oncontextmenu="event.preventDefault();equipSlot(${slot},'off-hand')">${slotInner(it)}</div>`;
+}
+function renderInv(){
+  const mi = document.getElementById('mainInv');
+  const hb = document.getElementById('hotbar');
+  const h = document.getElementById('invHeld');
+  if (!INV){
+    mi.innerHTML = '<div class="empty">暂无数据</div>';
+    hb.innerHTML = '';
+    return;
+  }
+  const bySlot = {};
+  (INV.items || []).forEach(it => { bySlot[it.slot] = it; });
+
+  let html = '';
+  for (let s = 9; s <= 35; s++) html += slotCell(bySlot[s], s, false);
+  mi.innerHTML = html;
+
+  let bar = '';
+  for (let i = 0; i < 9; i++){
+    const it = (INV.hotbar || [])[i] || null;
+    bar += slotCell(it, 36 + i, i === (INV.quickBarSlot || 0));
+  }
+  hb.innerHTML = bar;
+
+  const quick = INV.quickBarSlot || 0;
+  const main = (INV.hotbar || [])[quick] || null;
+  const mh = document.getElementById('mainHand');
+  mh.innerHTML = slotInner(main);
+  mh.onmousedown = main ? (e) => slotDown(e, 36 + quick, main.name) : null;
+  document.getElementById('mainHandName').textContent =
+    main ? `${main.displayName || main.name} ×${main.count}` : '空手';
+  document.getElementById('mainHandLbl').textContent = `主手(热栏${quick + 1})`;
+  const off = INV.offhand || null;
+  const oh = document.getElementById('offHand');
+  oh.innerHTML = slotInner(off);
+  oh.onmousedown = off ? (e) => slotDown(e, 45, off.name) : null;
+  document.getElementById('offHandName').textContent =
+    off ? `${off.displayName || off.name} ×${off.count}` : '空';
+
+  const ar = INV.armor || [];
+  const AD = [['head', '头盔', 5], ['torso', '胸甲', 6], ['legs', '护腿', 7], ['feet', '靴', 8]];
+  document.getElementById('armorSlots').innerHTML = AD.map(([d, label, s], i) => {
+    const it = ar[i] || null;
+    const md = it ? `onmousedown="slotDown(event,${s},'${esc(it.name)}')"` : '';
+    return `<div class="slot dropzone" data-dest="${d}" ${md}
+      title="拖到这里 → ${label}（可拖出）">${slotInner(it)}</div>`;
+  }).join('');
+  document.getElementById('accSlots').innerHTML =
+    Array.from({ length: 4 }).map(() => `<div class="slot" style="opacity:.3"></div>`).join('');
+  h.textContent = '手持：' + (INV.heldItem || '空手');
+}
+async function equipSlot(slot, dest){
+  await post('/api/act', { bot: INV_BOT, verb: 'equip',
+                           args: { slot, destination: dest || 'hand' } });
+  setTimeout(loadInv, 700);
+}
+function equipItem(slot){ equipSlot(slot, 'hand'); }
+
+// ---- 对指定 bot 下达任务（思考 → 回复 → 执行）----
+const CMD_LOG = [];
+function renderCmdLog(){
+  const el = document.getElementById('cmdLog');
+  if (!el) return;
+  el.innerHTML = CMD_LOG.length ? CMD_LOG.slice().reverse().map(x =>
+    `<div><span class="t">${esc(x.ts)}</span>${x.who === 'me'
+      ? '<b class="warn">我</b>'
+      : '<b>' + esc(x.bot || 'bot') + '</b>'} ${esc(x.text)}</div>`).join('')
+    : '<div class="empty">选一个 bot，输入任务 → 它会思考、回复并执行</div>';
+}
+function pushCmd(who, text, bot){
+  CMD_LOG.push({ ts: new Date().toLocaleTimeString(), who, text, bot });
+  if (CMD_LOG.length > 40) CMD_LOG.shift();
+  renderCmdLog();
+}
+async function sendCmd(){
+  const sel = document.getElementById('cmdBot');
+  const bot = sel ? sel.value : '';
+  const inp = document.getElementById('cmdIn');
+  const text = (inp.value || '').trim();
+  if (!bot || !text) return;
+  inp.value = '';
+  pushCmd('me', text, bot);
+  const r = await post('/api/ai_cmd', { bot, text });
+  if (r && r.ok){
+    pushCmd('bot', r.reply || '(无回复)', bot);
+    (r.actions || []).forEach((a, i) => {
+      const res = (r.results || [])[i] || {};
+      const fail = res.ok ? '' : (typeof res.result === 'string'
+        ? res.result : JSON.stringify(res.result || '')).slice(0, 140);
+      pushCmd('bot', `→ ${a.verb} ${JSON.stringify(a.args || {})} ${res.ok ? '✓' : '✗ ' + fail}`, bot);
+    });
+  } else {
+    pushCmd('bot', '✗ ' + ((r && r.error) || '失败'), bot);
+  }
+  load();
+}
+
+initSc(); load(); setInterval(load, 2000);
+setInterval(loadMap, 6000); setTimeout(loadMap, 2500);   // 地图 6s 一次：最贵（同步扫方块），别跟 bot 抢 CPU
+setInterval(loadPlayers, 10000); setTimeout(loadPlayers, 3000);
+setInterval(syncInvBot, 2000); setTimeout(syncInvBot, 800);
+setInterval(loadInv, 3000); setTimeout(loadInv, 1200);
+document.getElementById('invBot').addEventListener('change', loadInv);
+document.getElementById('cmdIn').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); sendCmd(); }
+});
+renderCmdLog();
+
+// ---- API 提供商设置 ----
+let PROV = [], PROV_DFT = '';
+function showView(v){
+  document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
+  const el = document.getElementById('view-' + v);
+  if (el) el.classList.remove('hidden');
+  if (v === 'settings') loadProviders();
+  if (v === 'bag') { syncInvBot(); loadInv(); }
+}
+function fmtCtx(n){
+  n = Number(n || 0);
+  if (!n) return '—';
+  if (n >= 1e6) return (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + 'M';
+  if (n >= 1000) return Math.round(n / 1000) + 'K';
+  return String(n);
+}
+async function fetchModels(){
+  const g = id => document.getElementById(id).value.trim();
+  const base = g('pfBase'), key = g('pfKey'), proto = g('pfProtocol');
+  const res = document.getElementById('pfRes');
+  if (!base || !key){ res.textContent = '先填 API 端点和 Key'; return; }
+  res.textContent = '正在从上游获取模型…';
+  const r = await post('/api/providers/models',
+                       { base_url: base, api_key: key, protocol: proto, id: g('pfId') });
+  const list = (r && r.result && r.result.models) || [];
+  if (r && r.ok && list.length){
+    const box = document.getElementById('pfModels');
+    box.classList.remove('hidden');
+    box.innerHTML = list.map(m =>
+      `<div onclick="pickModel('${esc(m.id)}')">${esc(m.id)}${(m.name && m.name !== m.id)
+        ? `<span class="mname">${esc(m.name)}</span>` : ''}</div>`).join('');
+    if (!g('pfModel')) document.getElementById('pfModel').value = list[0].id;
+    res.textContent = `✓ 拉到 ${list.length} 个模型，点下方列表选择`;
+  } else {
+    document.getElementById('pfModels').classList.add('hidden');
+    res.textContent = '✗ ' + ((r && r.result && r.result.note) || '获取失败');
+  }
+}
+function pickModel(id){
+  document.getElementById('pfModel').value = id;
+  document.getElementById('pfRes').textContent = '已选：' + id;
+}
+function renderProviders(){
+  const el = document.getElementById('provList');
+  el.innerHTML = PROV.length ? PROV.map(p => {
+    const u = p.usage || {};
+    const isDft = p.id === PROV_DFT;
+    return `<div class="pcard">
+      <div class="head">
+        <span class="nm">${esc(p.name)}${isDft ? ' <span class="badge">默认</span>' : ''}</span>
+        <span class="pill">${esc(p.protocol)}</span>
+      </div>
+      <div class="kv">模型 ${esc(p.model || '—')} ｜ 上下文 ${fmtCtx(p.context_window)} ｜ 思考 ${esc(p.reasoning_effort || '默认')} ｜ ${esc(p.base_url)}</div>
+      <div class="kv">调用 ${u.calls || 0} 次 ｜ 输入 ${u.input_tokens || 0} tok ｜ 输出 ${u.output_tokens || 0} tok</div>
+      <div class="rowbtn">
+        <button class="btn s" onclick="checkBalance('${esc(p.id)}')">查余额</button>
+        <button class="btn s" onclick="openProviderForm('${esc(p.id)}')">编辑</button>
+        ${isDft ? '' : `<button class="btn s" onclick="setDefault('${esc(p.id)}')">设默认</button>`}
+        <button class="btn s" onclick="removeProvider('${esc(p.id)}')">删除</button>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty">还没有提供商。点「新增」接入第一个（OpenAI 兼容或 Anthropic 协议）。</div>';
+}
+async function loadProviders(){
+  try {
+    const r = await apiGet('/api/providers');
+    const d = await r.json();
+    if (d.ok) { PROV = d.providers; PROV_DFT = d.default; renderProviders(); }
+  } catch (e) {}
+}
+function openProviderForm(id){
+  const p = id ? PROV.find(x => x.id === id) : null;
+  document.getElementById('pfTitle').textContent = p ? '编辑提供商' : '新增提供商';
+  document.getElementById('pfId').value = p ? p.id : '';
+  document.getElementById('pfId').disabled = !!p;
+  document.getElementById('pfName').value = p ? (p.name || '') : '';
+  document.getElementById('pfProtocol').value = p ? (p.protocol || 'openai') : 'openai';
+  document.getElementById('pfModel').value = p ? (p.model || '') : '';
+  document.getElementById('pfCtx').value = p ? (p.context_window || 1000000) : 1000000;
+  document.getElementById('pfEffort').value = p ? (p.reasoning_effort || '') : '';
+  const ml = document.getElementById('pfModels');
+  if (ml){ ml.classList.add('hidden'); ml.innerHTML = ''; }
+  document.getElementById('pfBase').value = p ? (p.base_url || '') : '';
+  document.getElementById('pfKey').value = p ? (p.api_key || '') : '';
+  document.getElementById('pfBalance').value = p ? (p.balance_url || '') : '';
+  document.getElementById('pfEnabled').checked = p ? (p.enabled !== false) : true;
+  document.getElementById('pfRes').textContent = '';
+  document.getElementById('providerForm').classList.remove('hidden');
+}
+function closeProviderForm(){ document.getElementById('providerForm').classList.add('hidden'); }
+async function saveProvider(){
+  const g = id => document.getElementById(id).value.trim();
+  const provider = {
+    id: g('pfId'), name: g('pfName'), protocol: g('pfProtocol'),
+    model: g('pfModel'), base_url: g('pfBase'), api_key: g('pfKey'),
+    balance_url: g('pfBalance'), enabled: document.getElementById('pfEnabled').checked,
+    context_window: Number(g('pfCtx') || 1000000),
+    reasoning_effort: g('pfEffort'),
+  };
+  if (!provider.id || !provider.name || !provider.base_url || !provider.api_key) {
+    document.getElementById('pfRes').textContent = 'ID / 名称 / 端点 / Key 必填'; return;
+  }
+  const r = await post('/api/providers', { provider });
+  document.getElementById('pfRes').textContent = r.ok ? '✓ 已保存' : '✗ ' + (r.error || '');
+  if (r.ok) { closeProviderForm(); loadProviders(); }
+}
+async function removeProvider(id){
+  if (!confirm('删除提供商 ' + id + ' ?')) return;
+  await post('/api/providers/remove', { id });
+  loadProviders();
+}
+async function setDefault(id){ await post('/api/providers/default', { id }); loadProviders(); }
+async function checkBalance(id){
+  const r = await post('/api/providers/balance', { id });
+  const res = r.result || {};
+  if (!r.ok) alert('余额查询失败：' + (res.note || ''));
+  else if (res.balance != null) alert('余额：' + res.balance + ' ' + (res.currency || ''));
+  else alert(res.note || '未识别到余额字段');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+// 项目级 build.gradle（留空即可，依赖在 app/build.gradle 里声明）
+tasks.register('clean', Delete) {
+    delete rootProject.buildDir
+}

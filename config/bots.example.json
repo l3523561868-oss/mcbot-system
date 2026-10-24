@@ -1,0 +1,24 @@
+[
+  {
+    "id": "bot-a",
+    "name": "Bot-A",
+    "kind": "protocol",
+    "base": "http://127.0.0.1:8801",
+    "say_mode": "say",
+    "enabled": true,
+    "bridge_port": 8801,
+    "account": "bot_a",
+    "password": "<AUTHME_PASSWORD>"
+  },
+  {
+    "id": "bot-b",
+    "name": "Bot-B",
+    "kind": "protocol",
+    "base": "http://127.0.0.1:8802",
+    "say_mode": "say",
+    "enabled": true,
+    "bridge_port": 8802,
+    "account": "bot_b",
+    "password": "<AUTHME_PASSWORD>"
+  }
+]

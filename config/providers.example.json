@@ -1,0 +1,17 @@
+{
+  "default": "deepseek",
+  "providers": [
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "protocol": "openai",
+      "model": "deepseek-chat",
+      "base_url": "https://api.deepseek.com/chat/completions",
+      "api_key": "<YOUR_API_KEY>",
+      "balance_url": "",
+      "enabled": true,
+      "context_window": 64000,
+      "reasoning_effort": ""
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+# ---- 依赖与构建产物 ----
+node_modules/
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+
+# ---- 运行期生成 ----
+logs/
+log/
+*.log
+_launcher_log/
+_tmp_serve/
+termux_deploy/
+termux_deploy.zip
+pc_ip.txt
+pc_port.txt
+watchdog.log
+
+# ---- 真实配置（模板见 config/*.example.json） ----
+src/console/bots.json
+src/console/brain.json
+src/console/providers.json
+src/console/usage.json
+src/console/data/
+src/bot/.env
+.env
+*.env
+
+# ---- 过程产物 ----
+_probe/
+_verify/
+*.bak
+*.orig
+~$*
+*.tmp
+
+# ---- 二进制 ----
+*.exe
+MC-Bot-GUI/
+MC-Bot-Launcher/
+_internal/
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
