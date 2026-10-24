@@ -21,6 +21,7 @@ const USER = userArg ?? "bot_one";
 const PW = process.env.BOT_PW || "";
 const BOT_START = Date.now();   // 交接版：口令只从环境变量读取
 const HERE = path.dirname(url.fileURLToPath(import.meta.url));
+const MC_VERSION = process.env.MC_VERSION || "1.21.1";   // 可覆盖：本地存档/其他 1.21.x 服
 const BRIDGE_PORT = Number(process.env.BRIDGE_PORT || 8801);   // 多 bot 共存时用环境变量区分
 
 // ---- 运行日志实时落盘 ----
@@ -44,14 +45,30 @@ try {
 // ---- NeoForge 通道数据 ----
 // 可用环境变量 MC_CAPTURE 指定抓包文件；默认读同目录 capture/channel-capture.json。
 // ⚠️ 仓库内该文件是**示意样本**（仅演示结构），必须用真客户端抓包替换后才能连真服。
+const MIN_CHANNELS = Number(process.env.MIN_CHANNELS || 100);
 let CAPTURED = null;
 try {
   const _capLocal = process.env.MC_CAPTURE || path.join(HERE, "capture", "channel-capture.json");
   CAPTURED = JSON.parse(fs.readFileSync(_capLocal, "utf8"));
-  if (Array.isArray(CAPTURED) && CAPTURED.length < 100) {
-    console.log(`!! 注意：通道表只有 ${CAPTURED.length} 条，多半是示意样本，连真服会被踢`);
+  const n = Array.isArray(CAPTURED) ? CAPTURED.length : 0;
+  if (n < MIN_CHANNELS && process.env.ALLOW_SAMPLE !== "1") {
+    console.error("");
+    console.error(`[!] 通道表只有 ${n} 条，判定为仓库自带的“示意样本”。`);
+    console.error("    直接连任何真实 NeoForge 服务器都会被踢（服务端会提示你没装 NeoForge）。");
+    console.error("    解决：按 docs/01-部署流程/05-获取整合包与抓包.md 生成真实通道表，");
+    console.error("          或用 MC_CAPTURE=/path/to/channel-capture.json 指向已抓好的文件。");
+    console.error("    只做本地链路演示：设 ALLOW_SAMPLE=1 可跳过本检查。");
+    console.error("");
+    process.exit(2);
   }
-} catch (e) { console.log("!! 通道表缺失:", e.message); }
+  if (n < MIN_CHANNELS) console.log(`!! 已按 ALLOW_SAMPLE=1 跳过通道表校验（当前 ${n} 条，连真服必被踢）`);
+} catch (e) {
+  console.error("!! 通道表缺失或解析失败:", e.message);
+  if (process.env.ALLOW_SAMPLE !== "1") {
+    console.error("   见 src/bot/capture/README.md；仅演示可设 ALLOW_SAMPLE=1");
+    process.exit(2);
+  }
+}
 
 const varint = (n) => {
   const out = [];
@@ -245,7 +262,7 @@ function startBot() {
     host: HOST,
     port: PORT,
     username: USER,
-    version: "1.21.1",
+    version: MC_VERSION,
     auth: "offline",
     brand: "neoforge",
     hideErrors: false, // [诊断] 打开 deserializer 错误日志（原本 true 会把 partialReadError 堆栈全部静音）
@@ -869,7 +886,7 @@ function startBot() {
   });
 
   client.on("select_known_packs", (data) => {
-    client.write("select_known_packs", { packs: [{ namespace: "minecraft", id: "core", version: "1.21.1" }] });
+    client.write("select_known_packs", { packs: [{ namespace: "minecraft", id: "core", version: MC_VERSION }] });
   });
 }
 

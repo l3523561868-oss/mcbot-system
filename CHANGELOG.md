@@ -2,6 +2,24 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [Unreleased]
+
+### 新增
+
+- `scripts/doctor.py`：环境体检与运行校验（Python/Node/npm、必要文件、node_modules 补丁哈希、
+  通道表条数、`bots.json`、端口占用、控制台 HTTP、`/state` 在线态），支持 `--verify` / `--json` / `--strict`。
+- `docs/01-部署流程/05-获取整合包与抓包.md`：整合包三条获取路径、通道表抓取与落盘、校验与常见失败。
+- `docs/01-部署流程/06-本地存档与局域网.md`：单人存档 / 对局域网开放 的接入步骤与限制。
+- 环境变量 `MC_VERSION`（默认 `1.21.1`）与 `MC_CAPTURE`（自定义抓包路径）、`MIN_CHANNELS`、`ALLOW_SAMPLE`。
+
+### 变更
+
+- **通道表改为硬阻断**：`forge-live.mjs` 检测到通道表少于 `MIN_CHANNELS`（默认 100）时直接 `exit 2`
+  并打印解决路径，不再"警告后继续跑"。仅本地演示可用 `ALLOW_SAMPLE=1` 放行。
+- `select_known_packs` 与原版版本号改为跟随 `MC_VERSION`，便于接入其他 1.21.x 环境。
+
+---
+
 ## [1.0.0] - 2026-10-24
 
 首个公开版本。整理自一套已在 Windows 与安卓 Termux 上长期运行的多 Bot 控制系统，

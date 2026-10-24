@@ -43,6 +43,9 @@
 ## 2. 快速开始（PC，5 分钟）
 
 ```bash
+# 0) 体检（缺什么、下一步做什么，一条命令说清）
+python scripts/doctor.py
+
 # 1) 依赖：Python 3.10+ / Node 18+ / Git
 python --version && node --version
 
@@ -86,7 +89,9 @@ mcbot-system/
 │   │   ├── 01-PC端部署.md      Windows 环境从零到 bot 进服
 │   │   ├── 02-Termux安卓部署.md 一部安卓手机 = 服务器 + 遥控器
 │   │   ├── 03-PC到手机同步更新.md 改完代码怎么推到手机
-│   │   └── 04-网络与远程访问.md  Tailscale / 局域网 / 公网 + 鉴权
+│   │   ├── 04-网络与远程访问.md  Tailscale / 局域网 / 公网 + 鉴权
+│   │   ├── 05-获取整合包与抓包.md ★ 唯一必须人工的一步
+│   │   └── 06-本地存档与局域网.md 不连公服，进自己的单人存档
 │   ├── 02-操作手册.md          日常启停、体检、日志、脚本速查
 │   ├── 03-PC端控制台.md        架构、API、统一语义、bot 间语言、只读模式
 │   ├── 04-移动端控制台.md      三种移动形态、APK 工程、性能优化
@@ -103,7 +108,7 @@ mcbot-system/
 │   ├── android/              WebView APK 工程（Android Studio）
 │   └── tools/                探针、看门狗、安全导航
 ├── config/                   示例配置（真实口令不入库）
-├── scripts/                  Windows 一键启动 bat
+├── scripts/                  doctor.py 体检 + Windows 启动 bat
 └── assets/                   控制台截图
 ```
 
