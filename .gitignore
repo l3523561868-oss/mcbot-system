@@ -28,6 +28,9 @@ src/bot/.env
 .env
 *.env
 
+# ---- 私有抓包（真实整合包指纹，绝不入库） ----
+src/bot/capture/private*.json
+
 # ---- 过程产物 ----
 _probe/
 _verify/

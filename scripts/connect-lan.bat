@@ -30,7 +30,7 @@ set "IP=127.0.0.1"
 set /p "IP=Host (IP, not port) [127.0.0.1]: "
 if not defined IP set "IP=127.0.0.1"
 
-REM 常见手误：把端口填到 Host。数字即视为端口，自动纠正。
+REM Common mistake: typing the port into Host. A pure number is treated as the port.
 set "GUESS="
 echo %IP%| findstr /r "^[0-9][0-9]*$" >nul && set "GUESS=%IP%"
 if defined GUESS (
@@ -67,15 +67,29 @@ echo.
 echo [i] target %IP%:%PORT%  name %NAME%  bridge 8801
 echo [i] LAN worlds have no AuthMe; BOT_PW stays empty ("BOT_PW is empty" is harmless).
 echo [i] If the log says the channel table is a sample, capture a real one first:
-echo     docs\01-部署流程\05-获取整合包与抓包.md
+echo     docs/01-deploy/05-get-modpack-and-capture.md (Chinese doc)
 echo.
+
+REM Use a private capture when present (untracked, see .gitignore)
+if exist "capture\private-channel-capture.json" (
+  set "MC_CAPTURE=%CD%\capture\private-channel-capture.json"
+  echo [i] using private channel capture
+)
+
+REM Pick a free bridge port (8801 may be taken by another bot already running)
+set "BRIDGE_PORT="
+for %%P in (8801 8802 8803 8804 8805) do (
+  if not defined BRIDGE_PORT (
+    netstat -ano | findstr ":%%P" | findstr "LISTENING" >nul || set "BRIDGE_PORT=%%P"
+  )
+)
+if not defined BRIDGE_PORT set "BRIDGE_PORT=8801"
+echo [i] bridge port %BRIDGE_PORT%  -^>  console base: http://127.0.0.1:%BRIDGE_PORT%
 
 set "BOT_PW="
 set "BOT_REG=0"
 set "COMBAT_OFF=1"
 set "XP_LOW_LEVEL=0"
-set "BRIDGE_PORT=8801"
-
 node forge-live.mjs "%IP%" "%PORT%" "%NAME%"
 
 echo.
