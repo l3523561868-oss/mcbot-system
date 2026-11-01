@@ -5,6 +5,12 @@ setlocal enabledelayedexpansion
 REM ============================================================
 REM Connect the bot to a LAN-opened world (single-player "Open to LAN").
 REM The console (8900) needs no change: it talks to the bot bridge on 8801.
+REM
+REM Usage:
+REM   connect-lan.bat                  interactive
+REM   connect-lan.bat 54815            port only, host = 127.0.0.1
+REM   connect-lan.bat 192.168.1.20 54815
+REM
 REM Keep this file ASCII-only and CRLF: cmd.exe parses .bat by codepage,
 REM UTF-8 Chinese text and LF-only line endings both break the parser.
 REM ============================================================
@@ -12,24 +18,51 @@ REM ============================================================
 cd /d "%~dp0..\src\bot"
 if errorlevel 1 goto :nodir
 
+if not "%~1"=="" goto :args
+
 echo.
 echo === Connect to LAN world ===
 echo   In game: Esc -^> Open to LAN, the chat shows a port, e.g. 54815.
-echo   Host: 127.0.0.1 (same PC) or 192.168.x.x (LAN world on another PC).
+echo   Host = IP address. Port = the number from the chat.
 echo.
 
 set "IP=127.0.0.1"
-set /p "IP=Host [127.0.0.1]: "
+set /p "IP=Host (IP, not port) [127.0.0.1]: "
 if not defined IP set "IP=127.0.0.1"
 
-set "PORT="
-set /p "PORT=Port (required, e.g. 54815): "
-if not defined PORT goto :noport
+REM 常见手误：把端口填到 Host。数字即视为端口，自动纠正。
+set "GUESS="
+echo %IP%| findstr /r "^[0-9][0-9]*$" >nul && set "GUESS=%IP%"
+if defined GUESS (
+  set "PORT=%GUESS%"
+  set "IP=127.0.0.1"
+  echo [i] "%GUESS%" looks like a port -^> host reset to 127.0.0.1, port set to %GUESS%
+  goto :askname
+)
 
+set "PORT="
+set /p "PORT=Port (e.g. 54815): "
+if not defined PORT goto :noport
+goto :askname
+
+:askname
 set "NAME=bot_local"
 set /p "NAME=Bot name [bot_local]: "
 if not defined NAME set "NAME=bot_local"
+goto :run
 
+:args
+if not "%~2"=="" (
+  set "IP=%~1"
+  set "PORT=%~2"
+) else (
+  set "IP=127.0.0.1"
+  set "PORT=%~1"
+)
+set "NAME=bot_local"
+if not "%~3"=="" set "NAME=%~3"
+
+:run
 echo.
 echo [i] target %IP%:%PORT%  name %NAME%  bridge 8801
 echo [i] LAN worlds have no AuthMe; BOT_PW stays empty ("BOT_PW is empty" is harmless).
