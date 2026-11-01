@@ -11,6 +11,11 @@ cd "$DEP" 2>/dev/null || { echo "[x] 找不到 $DEP"; exit 1; }
 
 say() { echo "[$(date +%H:%M:%S)] $*"; }
 
+# 连接目标：默认占位；连局域网时用 MC_HOST=<局域网IP> MC_PORT=<LAN 端口> 覆盖
+MC_HOST="${MC_HOST:-mc.example.com}"
+MC_PORT="${MC_PORT:-25565}"
+say "目标：$MC_HOST:$MC_PORT"
+
 # ---------- 1. 杀光残留 ----------
 say "1/5 停止所有残留进程…"
 
@@ -63,7 +68,7 @@ B_PID=$!
 BOT_PW='<BOT1_PASSWORD>' BOT_REG=0 COMBAT_OFF=1 XP_LOW_LEVEL=0 \
   CHAT_MONITOR_OFF=1 WAYSTONE_EYE_OFF=1 RECONNECT_STAGGER=0 \
   BRIDGE_PORT=8801 node forge-live.mjs \
-  mc.example.com 25565 bot_one > bot-8801.log 2>&1 &
+  "$MC_HOST" "$MC_PORT" bot_one > bot-8801.log 2>&1 &
 N1_PID=$!
 
 # 单 bot 模式：SINGLE_BOT=1 sh ~/termux_deploy/restart.sh
@@ -89,7 +94,7 @@ else
   BOT_PW='<BOT2_PASSWORD>' BOT_REG=0 COMBAT_OFF=1 XP_LOW_LEVEL=0 \
     CHAT_MONITOR_OFF=1 WAYSTONE_EYE_OFF=1 RECONNECT_STAGGER=15000 \
     BRIDGE_PORT=8802 node forge-live.mjs \
-    mc.example.com 25565 bot_two > bot-8802.log 2>&1 &
+    "$MC_HOST" "$MC_PORT" bot_two > bot-8802.log 2>&1 &
   N2_PID=$!
 fi
 

@@ -5,11 +5,18 @@
 # ============================================================
 cd "$(dirname "$0")"
 
+# ========== 连接目标（默认占位）==========
+# 连服务器：MC_HOST=你的域名 MC_PORT=端口
+# 连局域网：MC_HOST=192.168.x.x MC_PORT=游戏里"对局域网开放"给的端口
+# 同一份 capture/channel-capture.json 在两边通用（要求 MC 版本与 NeoForge 构建一致）
+MC_HOST="${MC_HOST:-mc.example.com}"
+MC_PORT="${MC_PORT:-25565}"
+
 # ========== ① 改成你自己的账号口令（必填） ==========
 BOT1_USER=bot_one
-BOT1_PW=<BOT1_PASSWORD>
+BOT1_PW='<BOT1_PASSWORD>'
 BOT2_USER=bot_two
-BOT2_PW=<BOT2_PASSWORD>
+BOT2_PW='<BOT2_PASSWORD>'
 # 远程/公网才需要；Tailscale 内网留空即可
 CONSOLE_TOKEN=""
 
@@ -25,9 +32,9 @@ fi
 # ========== ④ 启动两个 bot 桥接（连远程 MC 服务器） ==========
 echo "[termux] 启动 bot 桥接 8801/8802…"
 BOT_PW=$BOT1_PW BOT_REG=0 COMBAT_OFF=1 XP_LOW_LEVEL=0 BRIDGE_PORT=8801 \
-  node forge-live.mjs mc.example.com 25565 $BOT1_USER > bot-8801.log 2>&1 &
+  node forge-live.mjs "$MC_HOST" "$MC_PORT" $BOT1_USER > bot-8801.log 2>&1 &
 BOT_PW=$BOT2_PW BOT_REG=0 COMBAT_OFF=1 XP_LOW_LEVEL=0 BRIDGE_PORT=8802 \
-  node forge-live.mjs mc.example.com 25565 $BOT2_USER > bot-8802.log 2>&1 &
+  node forge-live.mjs "$MC_HOST" "$MC_PORT" $BOT2_USER > bot-8802.log 2>&1 &
 
 # ========== ⑤ 启动控制台 + 大脑（对外暴露 0.0.0.0） ==========
 echo "[termux] 启动控制台 8900 / 大脑 8902…"

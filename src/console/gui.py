@@ -26,6 +26,9 @@ import console
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 NODE = os.environ.get("NODE_BIN") or "node"          # 可用 NODE_BIN 指定绝对路径
 BOT_DIR = os.path.join(ROOT, "src", "bot")
+# 连接目标：连局域网时设 MC_HOST=<局域网IP> MC_PORT=<LAN 端口>
+MC_HOST = os.environ.get("MC_HOST", "mc.example.com")
+MC_PORT = os.environ.get("MC_PORT", "25565")
 LOG_DIR = os.path.join(console.HERE, "_launcher_log")
 
 NO_WIN = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -69,7 +72,7 @@ def start_bots():
                    XP_LOW_LEVEL="0", BRIDGE_PORT=str(port))
         logf = open(os.path.join(LOG_DIR, f"bot-{port}.log"), "wb")
         procs.append(subprocess.Popen(
-            [NODE, "forge-live.mjs", "mc.example.com", "25565", user],
+            [NODE, "forge-live.mjs", MC_HOST, MC_PORT, user],
             cwd=BOT_DIR, env=env, stdout=logf, stderr=subprocess.STDOUT,
             creationflags=NO_WIN))
     return procs

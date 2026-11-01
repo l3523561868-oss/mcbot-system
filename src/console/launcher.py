@@ -21,6 +21,8 @@ PY = os.environ.get("PY_BIN") or sys.executable    # 可用 PY_BIN 指定绝对�
 NODE = os.environ.get("NODE_BIN") or "node"        # 可用 NODE_BIN 指定绝对路径
 CONSOLE_DIR = os.path.join(ROOT, "src", "console")
 BOT_DIR = os.path.join(ROOT, "src", "bot")
+MC_HOST = os.environ.get("MC_HOST", "mc.example.com")
+MC_PORT = os.environ.get("MC_PORT", "25565")
 LOG_DIR = os.path.join(CONSOLE_DIR, "_launcher_log")
 
 NO_WIN = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -66,7 +68,7 @@ def main():
         env = dict(os.environ)
         env.update(BOT_PW="<BOT1_PASSWORD>", BOT_REG="0",
                    COMBAT_OFF="1", XP_LOW_LEVEL="0")
-        launch("bot", [NODE, "forge-live.mjs", "mc.example.com", "25565",
+        launch("bot", [NODE, "forge-live.mjs", MC_HOST, MC_PORT,
                        "bot_one"], BOT_DIR, env)
         print("[启动] 协议 bot (8801)，进服约 60~100 秒")
 

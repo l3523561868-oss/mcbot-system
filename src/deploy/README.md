@@ -14,6 +14,18 @@
 | `watchdog.sh` | `restart.sh` | 8900 连续 2 次失败 → 重启 `console.py` |
 | `termux-widget/start-console.sh` | 桌面挂件 | `setsid` 脱离会话启动 |
 
+## 连接目标（服务器 / 局域网）
+
+三个启动脚本都读 `MC_HOST` / `MC_PORT`，默认 `mc.example.com:25565`：
+
+```sh
+MC_HOST=192.168.1.20 MC_PORT=54321 sh restart.sh   # 连局域网
+MC_HOST=your.server.example MC_PORT=25565 sh restart.sh
+```
+
+同一份 `capture/channel-capture.json` 在服务器与局域网之间通用（前提：MC 版本 + NeoForge 构建一致），
+细节与并行连两个目标的做法见 [../../docs/01-部署流程/06-本地存档与局域网.md](../../docs/01-部署流程/06-本地存档与局域网.md)。
+
 ## PC 端打包器
 
 ```bash

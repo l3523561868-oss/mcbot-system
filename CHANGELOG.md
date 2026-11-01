@@ -2,6 +2,19 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [Unreleased]
+
+### 新增
+
+- 接入本地局域网世界：三个 Termux 启动脚本与 GUI/启动器统一读 `MC_HOST` / `MC_PORT`
+  （默认 `mc.example.com:25565`），同一整合包可复用同一份通道表，控制台无需改动。
+- `docs/01-部署流程/06` 新增「同一份整合包，同时连服务器与局域网」：切换目标、并行双目标、两条边界。
+
+### 修复
+
+- `src/deploy/start.sh` 的 `BOT1_PW` / `BOT2_PW` 占位符未加引号（`<...>` 被 shell 当成重定向，
+  直接 `syntax error`），现改为 `'<...>'`；8 个 shell 脚本已全部过 `sh -n`。
+
 ## [1.1.0] - 2026-10-24
 
 把"能看懂"补成"能一把装起来"：加体检、加一键安装、加通道表工具、加两份关键文档。

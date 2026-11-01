@@ -24,7 +24,11 @@ if [ -d node_modules ] && [ -f apply-patches.mjs ]; then
   node apply-patches.mjs >/dev/null 2>&1
 fi
 
-echo "[bot] 启动中…"
+# 连接目标（默认占位）：连局域网用 MC_HOST=<局域网IP> MC_PORT=<LAN 端口> 覆盖
+MC_HOST="${MC_HOST:-mc.example.com}"
+MC_PORT="${MC_PORT:-25565}"
+
+echo "[bot] 启动中…（目标 $MC_HOST:$MC_PORT）"
 
 # 申请唤醒锁：阻止 Android 在锁屏/后台时把 Termux 挂起或回收
 # （不申请就会出现"啥也没做，Termux 自己回到 Welcome 界面、bot 没了"）
@@ -58,7 +62,7 @@ else
 BOT_PW='<BOT1_PASSWORD>' BOT_REG=0 COMBAT_OFF=1 XP_LOW_LEVEL=0 \
   CHAT_MONITOR_OFF=1 WAYSTONE_EYE_OFF=1 RECONNECT_STAGGER=0 \
   BRIDGE_PORT=8801 node forge-live.mjs \
-  mc.example.com 25565 bot_one > bot-8801.log 2>&1 &
+  "$MC_HOST" "$MC_PORT" bot_one > bot-8801.log 2>&1 &
 PIDS="$PIDS $!"
 
 # 错开 12 秒再上第二个：同 IP 两个账号同一秒登录容易触发服务端 Connection throttled
@@ -67,7 +71,7 @@ sleep 12
 BOT_PW='<BOT2_PASSWORD>' BOT_REG=0 COMBAT_OFF=1 XP_LOW_LEVEL=0 \
   CHAT_MONITOR_OFF=1 WAYSTONE_EYE_OFF=1 RECONNECT_STAGGER=15000 \
   BRIDGE_PORT=8802 node forge-live.mjs \
-  mc.example.com 25565 bot_two > bot-8802.log 2>&1 &
+  "$MC_HOST" "$MC_PORT" bot_two > bot-8802.log 2>&1 &
 PIDS="$PIDS $!"
 fi
 
