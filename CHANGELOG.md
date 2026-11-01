@@ -10,6 +10,8 @@
   （默认 `mc.example.com:25565`），同一整合包可复用同一份通道表，控制台无需改动。
 - `docs/01-部署流程/06` 新增「同一份整合包，同时连服务器与局域网」：切换目标、并行双目标、两条边界。
 - `scripts/connect-lan.bat`：双击输入主机 + LAN 端口即可连本地世界（ASCII + CRLF，避免 cmd 解析乱码）。
+- `src/bot/capture-client.mjs`：用**真实客户端**抓通道表——起一个只做登录的假服务端，
+  索要 `neoforge:register` 并解码成 `channel-capture.json`（离线、不联网、不碰凭证）。
 - `docs/01-部署流程/06` 新增「跨网络：用内网穿透（樱花 frp 等）连接朋友的存档」：三步配置、四个坑、更稳的替代。
 
 ### 修复
