@@ -52,15 +52,28 @@ if not defined NAME set "NAME=bot_local"
 goto :run
 
 :args
-if not "%~2"=="" (
-  set "IP=%~1"
-  set "PORT=%~2"
+REM Accept: 54815 | host 54815 | host:54815
+set "A=%~1"
+set "B=%~2"
+set "C=%~3"
+for /f "tokens=1,2 delims=:" %%x in ("!A!") do (
+  set "H=%%x"
+  set "P=%%y"
+)
+if defined P (
+  set "IP=!H!"
+  set "PORT=!P!"
 ) else (
-  set "IP=127.0.0.1"
-  set "PORT=%~1"
+  if defined B (
+    set "IP=!A!"
+    set "PORT=!B!"
+  ) else (
+    set "IP=127.0.0.1"
+    set "PORT=!A!"
+  )
 )
 set "NAME=bot_local"
-if not "%~3"=="" set "NAME=%~3"
+if defined C set "NAME=!C!"
 
 :run
 echo.

@@ -18,6 +18,11 @@ pc_ip.txt
 pc_port.txt
 watchdog.log
 
+# 运行产物（probe 会写出目标地址与通道名，别入库）
+src/bot/probe-report.json
+src/bot/setup-failed.bin
+src/bot/logs/
+
 # ---- 真实配置（模板见 config/*.example.json） ----
 src/console/bots.json
 src/console/brain.json
