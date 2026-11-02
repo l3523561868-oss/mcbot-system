@@ -116,7 +116,8 @@ mcbot-system/
 ├── src/
 │   ├── console/              控制台后端 + 单页前端 + GUI/启动器
 │   ├── bot/                  协议 bot 本体 + 通道样本 + node_modules 补丁
-│   │   ├── core/             契约层（事件总线 / 动作注册表 / addon 加载器）★受保护
+│   │   ├── core/             契约层（事件总线 / 动作注册表 / 编解码 / 注册表）★受保护
+│   │   ├── behavior/         行为层（动作 + 提示词同层，随仓库发布）★受保护
 │   │   └── addons/           附加功能（新功能都写这里，不改核心）
 │   ├── deploy/               Termux 部署包脚本 + PC 端打包器
 │   ├── android/              WebView APK 工程（Android Studio）

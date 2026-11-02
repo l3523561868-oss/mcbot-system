@@ -13,7 +13,7 @@ import fs from "fs";
 import path from "path";
 import { on, registerAction, contributeState, getService, CONTRACT_VERSION } from "./contract.mjs";
 
-export async function loadAddons({ dir, ctx, log = console.log }) {
+export async function loadAddons({ dir, ctx, log = console.log, quiet = false, tag = quiet ? "behavior" : "addon" }) {
   if (!fs.existsSync(dir)) return [];
   const files = fs.readdirSync(dir).filter((f) => f.endsWith(".mjs") && !f.startsWith("_")).sort();
   const loaded = [];
@@ -25,7 +25,7 @@ export async function loadAddons({ dir, ctx, log = console.log }) {
       const mod = await import(urlOf(full));
       const setup = mod.default || mod.setup;
       if (typeof setup !== "function") {
-        log(`[addon] ${label}: 未导出 setup()，跳过`);
+        if (!quiet) log(`[${tag}] ${label}: 未导出 setup()，跳过`);   // behavior/ 里存在纯数据模块（如 prompts.mjs）
         continue;
       }
       await setup({
@@ -38,9 +38,9 @@ export async function loadAddons({ dir, ctx, log = console.log }) {
         contractVersion: CONTRACT_VERSION,
       });
       loaded.push(label);
-      log(`[addon] 已加载 ${label}`);
+      log(`[${tag}] 已加载 ${label}`);
     } catch (e) {
-      log(`[addon] ${label} 加载失败（已隔离）：${e && e.message ? e.message : e}`);
+      log(`[${tag}] ${label} 加载失败（已隔离）：${e && e.message ? e.message : e}`);
     }
   }
   return loaded;

@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-02T13:13:06.829Z",
-  "reason": "哈希改为按 LF 归一化，保证 Windows 与 CI 签名一致",
+  "updatedAt": "2026-11-02T13:33:04.652Z",
+  "reason": "新增行为层 behavior/（动作+提示词同层），核心移除内置提示词与聊天监视",
   "growthLimit": 1.05,
   "files": {
     "src/bot/core/addons.mjs": {
       "tier": "core",
-      "sha256": "9ffb42dca8c6defbbc6b30e955401cda4333326184ab0e9e8b664cf396c0968c",
+      "sha256": "e2fa251562407db96d9c7ea08852244bdd46be198e22678e35bde9a240c037ba",
       "lines": 54
     },
     "src/bot/core/codec.mjs": {
@@ -41,8 +41,8 @@
     },
     "src/bot/forge-live.mjs": {
       "tier": "stable",
-      "sha256": "d87e9770a59cee105d08a357457ba6d59588e22a387a3fa3b0aaed8e72a2413b",
-      "lines": 5020
+      "sha256": "42a849373a93b2dce7d93191813b81d022530d94ab3d735d97125e43ad3a6618",
+      "lines": 4936
     },
     "src/console/console.py": {
       "tier": "stable",
@@ -58,6 +58,21 @@
       "tier": "stable",
       "sha256": "b682f3116419c1b344d7e97680b98008cf4efd619fe58997c83f3c968956016b",
       "lines": 1402
+    },
+    "src/bot/behavior/actions.mjs": {
+      "tier": "behavior",
+      "sha256": "2572864ef9bb10ced601c6d39c32469b6720fc8e36ea70315558b4dd3af51569",
+      "lines": 47
+    },
+    "src/bot/behavior/chat-reply.mjs": {
+      "tier": "behavior",
+      "sha256": "8090a4d777100479ea7de73716302340c6859150cf0d513fa86c561a4571a083",
+      "lines": 120
+    },
+    "src/bot/behavior/prompts.mjs": {
+      "tier": "behavior",
+      "sha256": "840de85318403430da96de152f0cf150ca1fd136b1171f810c410884883d543f",
+      "lines": 57
     }
   }
 }

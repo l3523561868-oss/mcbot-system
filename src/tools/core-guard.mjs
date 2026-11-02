@@ -42,7 +42,14 @@ const AUTO = (fs.existsSync(CORE_DIR) ? fs.readdirSync(CORE_DIR) : [])
   .sort()
   .map((f) => ({ path: `src/bot/core/${f}`, tier: "core" }));
 
-const PROTECTED = [...AUTO, ...FIXED];
+// behavior/ 是产品自带行为（动作 + 提示词），与核心同等级：改动需签入
+const BEHAVIOR_DIR = path.join(ROOT, "src", "bot", "behavior");
+const BEHAVIOR = (fs.existsSync(BEHAVIOR_DIR) ? fs.readdirSync(BEHAVIOR_DIR) : [])
+  .filter((f) => f.endsWith(".mjs") && f !== "prompts.local.mjs")
+  .sort()
+  .map((f) => ({ path: `src/bot/behavior/${f}`, tier: "behavior" }));
+
+const PROTECTED = [...AUTO, ...FIXED, ...BEHAVIOR];
 
 const args = process.argv.slice(2);
 const asJson = args.includes("--json");

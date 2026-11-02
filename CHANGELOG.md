@@ -16,6 +16,18 @@
   索要 `neoforge:register` 并解码成 `channel-capture.json`（离线、不联网、不碰凭证）。
 - `docs/01-部署流程/06` 新增「跨网络：用内网穿透（樱花 frp 等）连接朋友的存档」：三步配置、四个坑、更稳的替代。
 
+### 新增（架构 · 行为层）
+
+- 新增 `src/bot/behavior/`：**动作与提示词同层**，与协议层明确分隔
+  （`prompts.mjs` 提示词装配 · `actions.mjs` 行为动作 · `chat-reply.mjs` 接话策略）。
+- **移除核心内置提示词**：`LLM_SYSTEM` 与聊天接话的硬编码 prompt 全部删除；
+  `prompts.mjs` 默认全空，未配置时 `ai_say` 返回"未配置提示词"而不假装成功。
+- 聊天接话从 `forge-live.mjs` 迁入 `chat-reply.mjs`（核心 -84 行），
+  协议层新增 `chat` / `llm` 服务（`recent`/`lastSeq`/`send`、`ask`）供行为层调用。
+- 守卫保护范围新增 `behavior/*.mjs`（共 14 个受保护文件），`prompts.local.mjs` 已 gitignore。
+- `selftest` 增至 23 项（提示词默认空、行为动作未配置时拒绝、配置后可用）；
+  真服回归 35s 通过。
+
 ### 新增（架构 · 阶段③ + 自检）
 
 - `core/codec.mjs`：线格式纯函数（`readVarInt` / `readUtf` / `writeVarInt` / `writeUtf` /

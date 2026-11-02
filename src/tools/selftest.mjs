@@ -193,6 +193,40 @@ test("contributeState：单个字段抛错不影响其他字段", () => {
   assert.equal("t_bad" in st, false);
 });
 
+// ---------- 4.5 行为层（动作 + 提示词同层） ----------
+await testAsync("prompts：默认全空（仓库不内置任何提示词）", async () => {
+  const { prompt, DEFAULTS } = await import("../bot/behavior/prompts.mjs");
+  for (const k of Object.keys(DEFAULTS)) assert.equal(prompt(k), "", `${k} 不应有内置文案`);
+  assert.equal(prompt("不存在的键"), "");
+});
+
+await testAsync("behavior：动作已注册；提示词为空时拒绝，配置后可用", async () => {
+  contract.registerService("chat", { recent: () => [], lastSeq: () => 0, send: () => {} });
+  contract.registerService("llm", { ask: async () => "测试回复" });
+  contract.registerService("bot", {
+    get: () => ({ experience: { level: 1, progress: 0 }, entity: { position: { x: 0, y: 0, z: 0 } } }),
+    user: () => "tester", say: () => {}, goto: () => {},
+    isOnline: () => true, isAuthed: () => true,
+  });
+  const { loadAddons } = await import("../bot/core/addons.mjs");
+  const loaded = await loadAddons({
+    dir: path.join(ROOT, "src", "bot", "behavior"),
+    ctx: { bot: () => null, log: () => {} },
+    quiet: true,
+  });
+  assert.ok(loaded.includes("actions"), "behavior/actions 未加载：" + loaded.join(","));
+  assert.ok(contract.actionNames().includes("ai_say"));
+  const r1 = await contract.dispatchAction("ai_say", { text: "hi" });
+  assert.equal(r1.ok, false);                       // 未配置提示词 → 不假装成功
+  assert.match(r1.error, /未配置提示词/);
+
+  process.env.PROMPT_AI_SAY = "请回应：{text}";
+  const r2 = await contract.dispatchAction("ai_say", { text: "hi" });
+  assert.equal(r2.ok, true);
+  assert.equal(r2.sent, "测试回复");
+  delete process.env.PROMPT_AI_SAY;
+});
+
 // ---------- 5. addon 装载 ----------
 await testAsync("addons：xp-guard 可装载并注册 xpguard 动作", async () => {
   contract.registerService("bot", {

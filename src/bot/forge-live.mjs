@@ -236,14 +236,13 @@ function aiCfg() {
 }
 const LLM_MODEL = "qwen2.5:7b";
 const LLM_URL = "http://localhost:11434";
-const LLM_SYSTEM = "你是 Minecraft 服务器里的 AI 玩家，名叫 " + USER + "。用简短自然的中文回复玩家，像真人玩家一样聊天。不要暴露自己是 AI 程序，不要说「可以指挥我」之类的话，不要罗列功能清单。回答控制在 30 字以内，一句话。";
 async function askLLM(prompt) {
   // 控制台的 ai_config.json 优先（url 填完整端点，Ollama/OpenAI 两种协议都兼容）
   const cfg = aiCfg() || {};
   if (cfg.enabled === false) return null;   // 控制台可一键关闭 AI
   const url = String(cfg.url || (LLM_URL + "/api/chat")).replace(/\/+$/, "");
   const model = cfg.model || LLM_MODEL;
-  const sys = cfg.system || LLM_SYSTEM;
+  const sys = cfg.system || "";   // 提示词由行为层提供，核心不内置
   try {
     const headers = { "Content-Type": "application/json" };
     if (cfg.key) headers.Authorization = "Bearer " + cfg.key;
@@ -253,7 +252,7 @@ async function askLLM(prompt) {
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: sys },
+          ...(sys ? [{ role: "system", content: sys }] : []),
           { role: "user", content: prompt },
         ],
         stream: false,
@@ -527,7 +526,6 @@ function startBot() {
     startCombat();        // 自动战斗：12 格内遇敌自动换剑反击（仅打 HOSTILE_HINTS）
     startPosReport();     // 坐标播报：位移 ≥1000 格时全服播报一次"当前位置 X Z"
     startRandomGreet();   // 随机问候：不定时 @ 在线玩家打招呼（LLM 接话）
-    startChatMonitor();   // 聊天监视：无需 @，bot 主动加入玩家对话（定时扫描聊天缓冲）
     startWaystoneEye();   // 石碑之眼：识别附近普通传送石碑并自动激活（WAYSTONE_EYE_OFF=1 可关）
     startAntiAfk();       // 反挂机：定期微转视角/小跳，避免被服务端按 AFK 踢（ANTI_AFK_OFF=1 可关）
     startDurabilityGuard(); // 耐久守护：装备耐久<35% 自动去淋浴间用经验修补修复
@@ -2638,101 +2636,7 @@ async function travelToWaystone(target, reply) {
   } catch (e) { if (reply) reply("传送异常：" + String(e.message || "").slice(0, 30)); return { ok: false, error: e.message }; }
 }
 
-// 3.5) 聊天监视：无需 @，bot 主动加入玩家对话（定时扫描聊天缓冲）
-// 触发：① 经验/等级关键词  ② 位置/坐标关键词  ③ 直接叫 "bot/机器人"  ④ 含"你"的问句
-// 限频：全局 30 秒 + 同玩家 45 秒，一轮只回应第一条命中的消息，避免刷屏。
-let chatMonitorTimer = null;
-let lastMonitorSeq = 0;            // 已扫描到的聊天序号游标
-let lastMonitorByPlayer = {};      // 按说话人限频
-let lastMonitorGlobal = 0;
-const MONITOR_INTERVAL = 12000;    // 每 12 秒扫描一次
-const MONITOR_GLOBAL_CD = 30000;   // 全局冷却 30 秒
-const MONITOR_PLAYER_CD = 45000;   // 同玩家冷却 45 秒
-const MONITOR_NAME_RE = /(^|\s)(bot|机器人|ai)\b/i;
-const MONITOR_XP_RE = /经验|等级|级别|xp|几级|多少级|level/i;
-const MONITOR_LOC_RE = /在哪|位置|坐标|你在哪|哪里|位于/i;
-const MONITOR_Q_RE = /[?？]|吗|呢|怎么|什么|多少|几$|几点|谁/i;
-
-function startChatMonitor() {
-  if (process.env.CHAT_MONITOR_OFF === "1") return;  // 手机端默认关：它会定时调 LLM，抢 CPU/网络
-  if (chatMonitorTimer) return;
-  lastMonitorSeq = chatSeq;        // 启动前已有的聊天不追溯，避免一上线就补回复
-  chatMonitorTimer = setInterval(chatMonitorTick, MONITOR_INTERVAL);
-  console.log("[chatmon] 启动（无需 @，每 " + (MONITOR_INTERVAL / 1000) + " 秒扫描聊天）");
-}
-
-function chatMonitorTick() {
-  if (!bot || !bot.entity || !authed) return;
-  const now = Date.now();
-  if (now - lastMonitorGlobal < MONITOR_GLOBAL_CD) return; // 全局冷却
-  const fresh = chatBuf.filter((c) => (c.seq || 0) > lastMonitorSeq);
-  lastMonitorSeq = chatSeq;
-  if (!fresh.length) return;
-  // 从旧到新处理，本轮只回应第一条命中的消息
-  for (const c of fresh) {
-    const text = c.text || "";
-    if (!text) continue;
-    if (new RegExp("<" + USER + ">").test(text)) continue;   // 自己的消息
-    if (SYS_HINTS.some((h) => text.includes(h))) continue;   // 系统消息
-    if (/bot[_-]?one|bot[_-]?two/i.test(text)) continue;      // 已被 @mention 路径处理
-    const m = text.match(/<(\w+)>[:：]?\s*(.*)/);
-    if (!m) continue;
-    const speaker = m[1];
-    const content = (m[2] || "").trim();
-    if (!content || speaker.toLowerCase() === USER.toLowerCase()) continue;
-    if (now - (lastMonitorByPlayer[speaker] || 0) < MONITOR_PLAYER_CD) continue; // 同玩家限频
-    // 判断触发类型（顺序：经验 > 位置 > 叫名 > 问句）
-    let kind = null;
-    if (MONITOR_XP_RE.test(content)) kind = "xp";
-    else if (MONITOR_LOC_RE.test(content)) kind = "loc";
-    else if (MONITOR_NAME_RE.test(content)) kind = "name";
-    else if (MONITOR_Q_RE.test(content) && /你(?!们)/.test(content)) kind = "q"; // 含"你"的问句（排除"你们"）
-    if (!kind) continue;
-    lastMonitorByPlayer[speaker] = now;
-    lastMonitorGlobal = now;
-    monitorRespond(kind, speaker, content, fresh);
-    break;
-  }
-}
-
-function monitorRespond(kind, speaker, content, recent) {
-  if (kind === "xp") {
-    const xp = bot.experience || {};
-    const lvl = xp.level != null ? xp.level : 0;
-    const prog = Math.round((xp.progress != null ? (xp.progress || 0) : 0) * 100);
-    bot.chat("@" + speaker + " 我当前经验等级 Lv." + lvl + "（本级进度 " + prog + "%）");
-    console.log("[chatmon] 命中经验查询 → " + speaker);
-    return;
-  }
-  if (kind === "loc") {
-    const p = bot.entity.position;
-    bot.chat("@" + speaker + " 我在 " + Math.round(p.x) + ", " + Math.round(p.z) + "（Y " + Math.round(p.y) + "）");
-    console.log("[chatmon] 命中位置查询 → " + speaker);
-    return;
-  }
-  if (kind === "name") {
-    // 叫到 bot 了：若含工作指令关键词，转交 @mention 路径执行；否则纯聊天用 LLM 接话
-    const CMD_RE = /过来|跟我|跟着|砍树|伐木|挖矿|挖石|巡|停|休息|回家|回出生|睡觉|吃|附近|找|时间|几点|石碑|传送|经验|等级|位置|坐标|在哪/;
-    if (CMD_RE.test(content)) {
-      tryMentionReply("<" + speaker + "> @" + USER + " " + content); // 构造伪装 mention 复用全部指令逻辑
-      console.log("[chatmon] 叫名+指令 → 转交 mention 执行：" + speaker);
-      return;
-    }
-    // 落到下面的 LLM 接话
-  }
-  // name / q → LLM 接话（基于最近聊天上下文，自然加入对话）
-  const ctx = recent.filter((r) => /<\w+>/.test(r.text || "")).slice(-5).map((r) => r.text).join("\n");
-  const prompt = "你是一个 Minecraft 服务器里的 AI 玩家（名字 " + USER + "），和真人玩家一起玩。\n"
-    + "最近服务器聊天：\n" + ctx + "\n\n"
-    + "玩家 " + speaker + " 说：「" + content + "」\n"
-    + "请自然接一句话，口语化，不超过 30 字，不要带 @。";
-  askLLM(prompt).then((reply) => {
-    if (!reply) return;
-    const clean = reply.replace(/[\r\n]+/g, " ").trim().slice(0, 80);
-    if (clean) setTimeout(() => { if (bot && bot.entity) bot.chat(clean); }, 600);
-  });
-  console.log("[chatmon] 命中接话 → " + speaker + "：「" + content.slice(0, 30) + "」");
-}
+// 3.5) 聊天接话已迁至 behavior/chat-reply.mjs（策略 + 提示词在行为层；协议层只提供 chat/llm 服务）。
 
 // 4) 坐标变化播报：相对上次播报位移 ≥1000 格时向服务器播报一次位置（格式：当前位置 X Z）
 let lastReportPos = null;
@@ -4984,6 +4888,7 @@ const bridge = http.createServer((req, res) => {
 // ---- 能力服务：把"原语"暴露给 addon，addon 只写策略，不碰协议 ----
 coreRegisterService("bot", {
   get: () => bot,
+  user: () => USER,
   goto: (x, y, z, range = 4) => myBotGoto(x, y, z, range),
   say: (text) => announce(String(text || "")),
   isAuthed: () => !!authed,
@@ -4993,22 +4898,33 @@ coreRegisterService("items", {
   findXp: () => findXpItem(),
   useXp: (n = 64) => useXpItems(n),
 });
+coreRegisterService("chat", {
+  recent: (n = 50) => chatBuf.slice(-n),
+  lastSeq: () => chatSeq,
+  send: (text) => { try { if (bot && bot.entity) bot.chat(String(text || "").slice(0, 200)); } catch (e) {} },
+});
+coreRegisterService("llm", {
+  ask: (promptText, opts = {}) => askLLM(String(promptText || ""), opts),
+});
 coreRegisterService("config", {
   xpSpot: { ...XP_SPOT },
   xpLowLevel: XP_LOW_LEVEL,
   version: MC_VERSION,
 });
 
-// ---- 附加模块：只通过契约接入，加载失败不影响核心 ----
-loadAddons({
-  dir: path.join(HERE, "addons"),
-  ctx: {
-    bot: () => bot,
-    log: (m) => console.log(m),
-    env: process.env,
-  },
-}).then((list) => { if (list.length) console.log("[addon] 共加载 " + list.length + " 个附加模块"); })
-  .catch((e) => console.log("[addon] 加载器异常（已隔离）：" + e.message));
+// ---- 行为层（behavior/）与附加模块（addons/）：都只通过契约接入 ----
+const layerCtx = {
+  bot: () => bot,
+  log: (m) => console.log(m),
+  env: process.env,
+};
+(async () => {
+  // behavior = 产品自带行为（动作 + 提示词同层），随仓库发布
+  await loadAddons({ dir: path.join(HERE, "behavior"), ctx: layerCtx, quiet: true });
+  // addons = 可插拔扩展，失败只影响自己
+  const list = await loadAddons({ dir: path.join(HERE, "addons"), ctx: layerCtx });
+  if (list.length) console.log("[addon] 共加载 " + list.length + " 个附加模块");
+})().catch((e) => console.log("[layer] 加载异常（已隔离）：" + e.message));
 
 // 每秒一次的心跳事件（附加模块可用来做巡检，注意保持轻量）
 setInterval(() => coreEmit(EVENTS.TICK, { bot, at: Date.now() }), 1000);

@@ -24,6 +24,7 @@ src/bot/setup-failed.bin
 src/bot/logs/
 src/bot/payload-dump/
 src/bot/pending-say.json
+src/bot/behavior/prompts.local.mjs
 
 # ---- 真实配置（模板见 config/*.example.json） ----
 src/console/bots.json
