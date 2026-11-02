@@ -237,6 +237,16 @@ def save_bots(path):
         json.dump(BOTS, f, ensure_ascii=False, indent=2)
 
 
+def bot_target(bot):
+    """bot["target"] = "host:port"；没配则回落到全局 MC_SERVER_HOST/PORT。"""
+    t = (bot.get("target") or "").strip()
+    if t:
+        host, _, port_s = t.rpartition(":")
+        if host and port_s.isdigit() and 0 < int(port_s) < 65536:
+            return host, int(port_s)
+    return SERVER_HOST, SERVER_PORT
+
+
 # ---- bot 进程启停（仅 Windows/PC；手机端不开 --manage） ----
 def _pid_on_port(port):
     """找正在监听该端口(PID)；没进程返回 None。手机端不走这条路。"""
@@ -297,16 +307,22 @@ def start_bot(bot):
     node = BOT_NODE if os.path.exists(BOT_NODE) else (shutil.which("node") or BOT_NODE)
     if not (os.path.exists(node) or shutil.which(node)):
         return False, {"error": f"找不到 node 可执行文件（当前：{node}）"}
+    host, srv_port = bot_target(bot)
     env = os.environ.copy()
     env.update({"BOT_PW": pw, "BOT_REG": "0", "COMBAT_OFF": "1",
-                "XP_LOW_LEVEL": "0", "BRIDGE_PORT": str(port),
-                "CHAT_MONITOR_OFF": "1", "WAYSTONE_EYE_OFF": "1"})
+                "XP_GUARD": "0", "BRIDGE_PORT": str(port),
+                "CHAT_MONITOR_OFF": "1", "WAYSTONE_EYE_OFF": "1",
+                "MC_VERSION": (bot.get("version") or os.environ.get("MC_VERSION") or "1.21.1")})
+    # 有私有抓包就用它（不入库，按整合包单独抓的那份）
+    cap = os.path.join(BOT_SRC, "capture", "private-channel-capture.json")
+    if os.path.exists(cap):
+        env["MC_CAPTURE"] = cap
     os.makedirs(LOG_DIR, exist_ok=True)
     logf = open(os.path.join(LOG_DIR, f"bot-{port}.out.log"), "a", encoding="utf-8")
     flags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
     try:
         subprocess.Popen([node, "forge-live.mjs",
-                          SERVER_HOST, str(SERVER_PORT), acct],
+                          host, str(srv_port), acct],
                          cwd=BOT_SRC, env=env, stdout=logf,
                          stderr=subprocess.STDOUT, creationflags=flags)
     except Exception as e:
@@ -314,7 +330,7 @@ def start_bot(bot):
         return False, {"error": str(e)}
     logf.close()
     _PROC_CACHE["ts"] = 0
-    log("PROC", f"启动 {bot.get('name') or bot['id']}（{acct}，桥 {port}）")
+    log("PROC", f"启动 {bot.get('name') or bot['id']}（{acct} → {host}:{srv_port}，桥 {port}）")
     return True, {"started": True, "port": port}
 
 
@@ -653,6 +669,27 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send({"ok": False, "error": "bot 不存在"})
             ok, res = (start_bot if p.endswith("start") else stop_bot)(bot)
             return self._send({"ok": ok, "result": res})
+
+        if p == "/api/target":
+            if not MANAGE:
+                return self._send({"ok": False, "error": "本机未开启 --manage（手机端不支持改目标）"}, 403)
+            bot = get_bot(body.get("id"))
+            if not bot:
+                return self._send({"ok": False, "error": "bot 不存在"})
+            t = (body.get("target") or "").strip()
+            host, _, port_s = t.rpartition(":")
+            if not host or not port_s.isdigit() or not (0 < int(port_s) < 65536):
+                return self._send({"ok": False, "error": "格式应为 host:port，例如 frp-fun.com:30177"})
+            bot["target"] = f"{host}:{int(port_s)}"
+            save_bots(self.bots_path)
+            port = int(bot.get("bridge_port") or 0)
+            if port and _pid_on_port(port):
+                stop_bot(bot)
+                time.sleep(2)
+                ok, res = start_bot(bot)
+                return self._send({"ok": ok, "result": res, "restarted": True, "target": bot["target"]})
+            return self._send({"ok": True, "saved": True, "target": bot["target"],
+                               "note": "已保存；点「开进程」后生效"})
 
         if p == "/api/report":
             # 反向接入上报：{bot:{id,name,kind}, state:{...}, chat:[{ts,who,text}]}

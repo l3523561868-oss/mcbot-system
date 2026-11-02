@@ -140,6 +140,7 @@
     background:rgba(0,0,0,.28);font-size:10.5px;line-height:1.45}
   .islot:hover{border-color:var(--p2);box-shadow:0 0 8px rgba(34,211,238,.35)}
   .islot .in{color:#cdd8ec;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tin{flex:1;min-width:150px;background:#0f1420;border:1px solid rgba(255,255,255,.14);color:#e6edf7;border-radius:4px;padding:4px 8px;font-size:12px}
   .islot .ic{color:var(--muted)}
   .islot.held{border-color:var(--ok);box-shadow:0 0 10px rgba(52,211,153,.45)}
   .islot .mark{color:var(--p4)}
@@ -601,7 +602,7 @@ function render(){
         <span><span class="pill" style="color:${stt.c}">${esc(stt.t)}</span>
         <span class="pill">${esc(b.kind)}</span>${STATE.manage ? `<span class="pill" style="color:${b.proc?'#34d399':'#5b6472'}">进程${b.proc?'运行':'停止'}</span>` : ''}</span></div>
       <div class="kv">坐标 <span class="xyz">${pos}</span> ｜ 血 ${num(b.health,0)} ｜ 饥饿 ${num(b.food,0)}</div>
-      <div class="kv">模式 ${b.mode ?? '—'} ｜ <b style="color:#c4b5fd">等级 ${b.experience ? (b.experience.level ?? 0) : '—'}（${b.experience ? (b.experience.points ?? 0) : 0} 点）</b> ｜ 登录 ${b.authed === true ? '✓' : (b.authed === false ? '✗' : '—')}</div><div class="kv">${esc(b.base)}</div>
+      <div class="kv">模式 ${b.mode ?? '—'} ｜ <b style="color:#c4b5fd">等级 ${b.experience ? (b.experience.level ?? 0) : '—'}（${b.experience ? (b.experience.points ?? 0) : 0} 点）</b> ｜ 登录 ${b.authed === true ? '✓' : (b.authed === false ? '✗' : '—')}</div><div class="kv">${esc(b.base)}${b.target?` ｜ 目标 <b style="color:#93c5fd">${esc(b.target)}</b>`:''}</div>${STATE.manage?`<div class="rowbtn"><input class="tin" id="tg_${esc(b.id)}" placeholder="host:port（如 frp-fun.com:30177）" value="${esc(b.target||'')}"><button class="btn s" onclick="setTarget('${esc(b.id)}')">连接此服务器</button></div>`:''}
       ${b.error?`<div class="kv bad">${esc(b.error)}</div>`:''}
       ${b.last_action?`<div class="kv">最近：${esc(b.last_action)}</div>`:''}
       ${STATE.readonly ? '' : `<div class="rowbtn">
@@ -778,6 +779,22 @@ async function procBot(id, action){
     alert(verb + '失败：' + ((r && (r.error || (r.result && r.result.error))) || '未知'));
   }
   setTimeout(load, action === 'start' ? 2500 : 800);
+}
+
+async function setTarget(id){
+  const el = document.getElementById('tg_' + id);
+  const t = ((el && el.value) || '').trim();
+  if(!/^[^\s:]+:\d{1,5}$/.test(t)){
+    alert('格式应为 host:port，例如 frp-fun.com:30177');
+    return;
+  }
+  const r = await post('/api/target', {id, target: t});
+  if(!(r && r.ok)){
+    alert('设置失败：' + ((r && (r.error || (r.result && r.result.error))) || '未知'));
+    return;
+  }
+  alert(r.restarted ? ('已切换并重启 → ' + r.target) : ('已保存 → ' + r.target + '\n点「开进程」后生效'));
+  setTimeout(load, r.restarted ? 2500 : 400);
 }
 
 async function runSc(name){

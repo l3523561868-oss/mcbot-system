@@ -16,6 +16,12 @@
   索要 `neoforge:register` 并解码成 `channel-capture.json`（离线、不联网、不碰凭证）。
 - `docs/01-部署流程/06` 新增「跨网络：用内网穿透（樱花 frp 等）连接朋友的存档」：三步配置、四个坑、更稳的替代。
 
+### 新增（控制台）
+
+- 每只 bot 卡片可填 **`host:port` 一键切换服务器**：进程在跑则自动重启，未跑则保存到
+  `bots.json` 的 `target` 字段；启动时自动带 `XP_GUARD=0` 与私有通道表（`MC_CAPTURE`）。
+- 接口 `POST /api/target`；仅 `--manage` 模式可用。
+
 ### 修复
 
 - **flow 编码**：抓包中 `flow` 为空（`0x00` = 未指定）时不再强行补成 `CLIENTBOUND`，
