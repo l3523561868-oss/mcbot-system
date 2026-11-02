@@ -23,6 +23,7 @@ src/bot/probe-report.json
 src/bot/setup-failed.bin
 src/bot/logs/
 src/bot/payload-dump/
+src/bot/pending-say.json
 
 # ---- 真实配置（模板见 config/*.example.json） ----
 src/console/bots.json
