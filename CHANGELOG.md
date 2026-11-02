@@ -16,6 +16,16 @@
   索要 `neoforge:register` 并解码成 `channel-capture.json`（离线、不联网、不碰凭证）。
 - `docs/01-部署流程/06` 新增「跨网络：用内网穿透（樱花 frp 等）连接朋友的存档」：三步配置、四个坑、更稳的替代。
 
+### 新增（架构）
+
+- 核心契约层 `src/bot/core/contract.mjs`：事件总线（spawn/death/disconnect/chat/tick/action）+ 动作注册表，
+  零依赖、错误隔离（插件抛错只计数，不影响核心）。
+- 附加模块机制 `src/bot/core/addons.mjs` + `src/bot/addons/`：新功能通过 `setup(ctx)` 接入，
+  核心只在 6 个固定位置 emit，桥的未知动作先交 addon。
+- 核心守卫 `src/tools/core-guard.mjs`：SHA-256 指纹 + 依赖方向 + 体积增长检查；
+  改核心必须 `--update -m "原因"`，原因记录在 `src/bot/core/CORE.lock`。
+- `docs/11-架构与核心保护.md`：分层、依赖矩阵、8 条耦合风险（含实测证据）、R1–R6 边界规则、迁移路线。
+
 ### 新增（控制台）
 
 - 每只 bot 卡片可填 **`host:port` 一键切换服务器**：进程在跑则自动重启，未跑则保存到

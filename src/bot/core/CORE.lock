@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "updatedAt": "2026-11-02T12:59:51.757Z",
+  "reason": "引入契约层与 addons 加载器，冻结核心边界",
+  "growthLimit": 1.05,
+  "files": {
+    "src/bot/core/contract.mjs": {
+      "tier": "core",
+      "sha256": "d44f3b4d7774d0207f2def526682e8d615fd68ef3f279dc857d4164e801a9deb",
+      "lines": 126
+    },
+    "src/bot/core/addons.mjs": {
+      "tier": "core",
+      "sha256": "ae20c04cd21304e0c01b1a8419617d5d0dd540e0fc4a0741fd6515669619b12c",
+      "lines": 52
+    },
+    "src/bot/capture/channel-capture.json": {
+      "tier": "core",
+      "sha256": "3c94c1945d87ab7d2e5cc4e225f091b5b25a832ae4cc4b8afde037a2c8fac9a6",
+      "lines": 15
+    },
+    "src/bot/capture/known-packs-real.json": {
+      "tier": "core",
+      "sha256": "50c56d8533e77439408330af54eec3d9fcaa3f2c3a7fc9a0c4e1836772235604",
+      "lines": 1
+    },
+    "src/bot/channel-specs.json": {
+      "tier": "core",
+      "sha256": "500f3ef8b7ad4366c80d1f435fe8fd22b873bdd7e9d1d96e7a0a2260c05c6d73",
+      "lines": 11
+    },
+    "src/bot/forge-live.mjs": {
+      "tier": "stable",
+      "sha256": "0220c4a83c7dcbdd80e32265080fe2246f0ea6784598a3256902bc94e6f12ae5",
+      "lines": 5095
+    },
+    "src/console/console.py": {
+      "tier": "stable",
+      "sha256": "b3cec7aa199cb95ae0e90e7a55ad5c279cdd42449b459f7af9147ae9f34399e4",
+      "lines": 867
+    },
+    "src/console/adapters.py": {
+      "tier": "stable",
+      "sha256": "37b253b04c177a3e9046aa3234e30d5009a46e44314567ebf202c3d643659f7c",
+      "lines": 198
+    },
+    "src/console/index.html": {
+      "tier": "stable",
+      "sha256": "b682f3116419c1b344d7e97680b98008cf4efd619fe58997c83f3c968956016b",
+      "lines": 1402
+    }
+  }
+}

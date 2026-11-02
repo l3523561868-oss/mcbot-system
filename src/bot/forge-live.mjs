@@ -13,6 +13,9 @@ import fs from "fs";
 import path from "path";
 import url from "url";
 import crypto from "crypto";
+// ---- 核心契约层（受保护；附加功能请写 addons/，不要改这里）----
+import { EVENTS, emit as coreEmit, dispatchAction as coreDispatch } from "./core/contract.mjs";
+import { loadAddons } from "./core/addons.mjs";
 
 const [hostArg, portArg, userArg] = process.argv.slice(2);
 const HOST = hostArg ?? "mc.example.com";
@@ -479,6 +482,7 @@ function startBot() {
     console.log("[probe] _signedChat =", client._signedChat ? "有" : "null");
   });
   bot.on("spawn", () => {
+    coreEmit(EVENTS.SPAWN, { bot, client: bot._client, user: USER, host: HOST, port: PORT });
     parseErrReconnects = 0; // 成功进入世界 → 清零连续错位计数
     loginTries = 0; lastLoginAt = 0;   // 每次进世界重置登录补发额度
     sessionStartAt = Date.now();
@@ -520,6 +524,7 @@ function startBot() {
     startDurabilityGuard(); // 耐久守护：装备耐久<35% 自动去淋浴间用经验修补修复
   });
   bot.on("death", () => {
+    coreEmit(EVENTS.DEATH, { bot, position: bot.entity?.position ? { ...bot.entity.position } : null });
     const p = bot.entity?.position;
     console.log("[" + ts() + "] 💀 被击杀 @", p ? Math.round(p.x) + "," + Math.round(p.z) : "?");
     announce("[阵亡] 被击杀了！马上自动重生");
@@ -573,6 +578,7 @@ function startBot() {
     // ★ 记下断开原因 + 这一趟活了多久：如果每次都是同一个时长（比如都 150s 左右），
     //   那就是服务端的定时踢（AFK/清理/限流），不是网络抖动。
     const lived = sessionStartAt ? Math.round((Date.now() - sessionStartAt) / 1000) : -1;
+    coreEmit(EVENTS.DISCONNECT, { reason: String(reason), lived, reconnects });
     try {
       console.log("[" + ts() + "] [end] 原因: " + (typeof reason === "string" ? reason : JSON.stringify(reason)).slice(0, 300)
         + " ｜ 在线 " + lived + "s");
@@ -617,6 +623,7 @@ function startBot() {
 
   bot.on("message", (msg) => {
     const t = msg.toString ? msg.toString() : String(msg);
+    coreEmit(EVENTS.CHAT, { text: t, raw: msg });
     if (!t) return;
     console.log("[CHAT]", t.slice(0, 130));
     // ★ 游戏内指令 @//bot/ ...：优先处理并 return，避免被 LLM 接话/问候逻辑抢走
@@ -5054,8 +5061,10 @@ const bridge = http.createServer((req, res) => {
           case "cs_fuel_status": out = csFuelStatus(); break;
           case "cs_auto_fly": out = csSetAutoFly(!!a.on); break;
           case "cs_travel": out = csSetTravel(!!a.on); break;
-          default:
-            out = { ok: false, error: "未知动作 " + a.type };
+          default: {
+            const hit = await coreDispatch(a.type, a);
+            out = hit === undefined ? { ok: false, error: "未知动作 " + a.type } : hit;
+          }
         }
       } catch (e) { out = { ok: false, error: e.message }; }
       res.end(JSON.stringify(out));
@@ -5065,6 +5074,20 @@ const bridge = http.createServer((req, res) => {
   res.statusCode = 404;
   res.end('{"error":"use GET /state or POST action"}');
 });
+// ---- 附加模块：只通过契约接入，加载失败不影响核心 ----
+loadAddons({
+  dir: path.join(HERE, "addons"),
+  ctx: {
+    bot: () => bot,
+    log: (m) => console.log(m),
+    env: process.env,
+  },
+}).then((list) => { if (list.length) console.log("[addon] 共加载 " + list.length + " 个附加模块"); })
+  .catch((e) => console.log("[addon] 加载器异常（已隔离）：" + e.message));
+
+// 每秒一次的心跳事件（附加模块可用来做巡检，注意保持轻量）
+setInterval(() => coreEmit(EVENTS.TICK, { bot, at: Date.now() }), 1000);
+
 bridge.listen(BRIDGE_PORT, "127.0.0.1", () => {
   console.log("[" + ts() + "] 决策桥 http://127.0.0.1:" + BRIDGE_PORT + "（GET /state | POST {type:...}）");
   startBot();
