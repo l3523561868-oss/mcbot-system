@@ -70,6 +70,9 @@ cp brain.example.json ../src/console/brain.json
 # 4) 起服务
 cd ../src/console
 python console.py --port 8900          # 另开窗口：python brain.py --port 8902
+
+# 5) 自检（可选，20 秒）：核心逻辑 + 守卫
+cd ../.. && npm --prefix src/bot test
 ```
 
 浏览器打开 `http://127.0.0.1:8900` 即可。完整步骤（含 GUI 版、开机自启、校验点）见

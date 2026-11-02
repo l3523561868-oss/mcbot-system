@@ -17,6 +17,15 @@ import crypto from "crypto";
 import { EVENTS, emit as coreEmit, dispatchAction as coreDispatch,
          registerService as coreRegisterService, collectState as coreCollectState } from "./core/contract.mjs";
 import { loadAddons } from "./core/addons.mjs";
+import { decodeRegistryPayload } from "./core/codec.mjs";
+import { RegistryStore, injectIntoPrismarine } from "./core/registry.mjs";
+
+// 模块内状态（不再挂 global，避免跨文件污染）
+const REG = new RegistryStore();
+let frzCount = 0;
+let regSaveTimer = null;
+let bdNetSync = null;
+let bdNetSyncAt = 0;
 
 const [hostArg, portArg, userArg] = process.argv.slice(2);
 const HOST = hostArg ?? "mc.example.com";
@@ -730,9 +739,9 @@ function startBot() {
     // ★ 维度网络存储同步：网络里"有哪些物品"的唯一来源（153KB 级）。缓存原始字节供离线解析。
     if (ch === "beyonddimensions:disordered_slot_group_sync_packet") {
       try {
-        global.__bdNetSync = Buffer.isBuffer(p.data) ? p.data : Buffer.from(p.data || []);
-        global.__bdNetSyncAt = Date.now();
-        console.log("[BD] 收到网络存储同步 " + global.__bdNetSync.length + "B（已缓存）");
+        bdNetSync = Buffer.isBuffer(p.data) ? p.data : Buffer.from(p.data || []);
+        bdNetSyncAt = Date.now();
+        console.log("[BD] 收到网络存储同步 " + bdNetSync.length + "B（已缓存）");
       } catch (e) { }
     }
     if (ch === "neoforge:register") {
@@ -756,72 +765,36 @@ function startBot() {
       client.write("custom_payload", { channel: "neoforge:frozen_registry_sync_completed", data: Buffer.alloc(0) });
     } else if (ch === "neoforge:frozen_registry") {
       // NeoForge 模组注册表同步：服务器**不**发 minecraft:item，模组物品/方块注册项全在这里下发。
-      // 格式（实测）：writeUtf(registryId) + varint(count) + count × [varint(id) + writeUtf(name)]
+      // 解析在 core/codec.mjs（纯函数），注入在 core/registry.mjs（给定 reg 就干活）。
       try {
         const buf = Buffer.isBuffer(p.data) ? p.data : Buffer.from(p.data || []);
-        global.__frzCount = (global.__frzCount || 0) + 1;
-        // 调试转储默认关闭（内容含真实注册表名）；DEBUG_DUMP=1 才落盘，且不因目录缺失中断解析
-        if (process.env.DEBUG_DUMP === "1" && global.__frzCount <= 40) {
+        frzCount++;
+
+        // 调试转储默认关闭（内容含真实注册表名）；DEBUG_DUMP=1 才落盘
+        if (process.env.DEBUG_DUMP === "1" && frzCount <= 40) {
           try {
             fs.mkdirSync(path.join(HERE, "payload-dump"), { recursive: true });
             fs.appendFileSync(path.join(HERE, "payload-dump", "frozen-registry.log"),
-              "#" + global.__frzCount + " len=" + buf.length + " hex=" + buf.toString("hex") + "\n");
+              "#" + frzCount + " len=" + buf.length + " hex=" + buf.toString("hex") + "\n");
           } catch (e) { /* 转储失败不影响解析 */ }
         }
-        // ---- 通用自动注册：不写死注册表名，凡 prismarine-registry 里有对应表的都自动灌入 ----
-        let o = 0;
-        const rv = () => { let v = 0, s = 0, n; do { n = buf[o + s]; v += (n & 0x7f) * Math.pow(2, 7 * s); s++; } while (n & 0x80); o += s; return v; };
-        const rdUtf = () => { const n = rv(); const s = buf.slice(o, o + n).toString("utf8"); o += n; return s; };
-        const rid = rdUtf();
-        const count = rv();
-        const names = [];
-        for (let i = 0; i < count; i++) { const id = rv(); names[id] = rdUtf(); }
 
-        global.__regMaps = global.__regMaps || {};
-        global.__regMaps[rid] = names;
+        const parsed = decodeRegistryPayload(buf);
+        if (!parsed) { console.log("[registry] 载荷解析失败（长度 " + buf.length + "B）"); }
+        else {
+          const { registryId, count, names } = parsed;
+          REG.set(registryId, names);
 
-        // 规范化：minecraft:xxx → xxx（与 mineflayer 原生命名一致），模组项保留 modid:name
-        const short = (nm) => (nm && nm.startsWith("minecraft:") ? nm.slice(10) : nm);
-
-        // registryId → prismarine-registry 的两个字段（数组 + 名字表）
-        const HINTS = {
-          "minecraft:item": ["items", "itemsByName"],
-          "minecraft:block": ["blocks", "blocksByName"],
-          "minecraft:entity_type": ["entities", "entitiesByName"],
-          "minecraft:biome": ["biomes", "biomesByName"],
-          "minecraft:enchantment": ["enchantments", "enchantmentsByName"],
-          "minecraft:particle_type": ["particles", "particlesByName"],
-          "minecraft:mob_effect": ["effects", "effectsByName"],
-          "minecraft:attribute": ["attributes", "attributesByName"],
-          "minecraft:instrument": ["instruments", "instrumentsByName"]
-        };
-        const reg = bot && bot.registry;
-        const hint = HINTS[rid];
-        let fixed = 0, modded = 0;
-        if (hint && reg && reg[hint[0]] && reg[hint[1]]) {
-          const arr = reg[hint[0]], byName = reg[hint[1]];
-          names.forEach((full, id) => {
-            if (!full) return;
-            const nm = short(full);
-            if (!String(full).startsWith("minecraft:")) modded++;
-            const cur = arr[id];
-            if (cur && cur.name === nm) return; // 原版项：保留（displayName/硬度等更完整）
-            const obj = Object.assign({}, cur || {}, { id, name: nm, displayName: nm });
-            if (obj.stackSize == null) obj.stackSize = 64;
-            arr[id] = obj;
-            byName[nm] = obj;
-            fixed++;
-          });
+          const reg = bot && bot.registry;
+          const { fixed, modded, injected } = injectIntoPrismarine(reg, registryId, names);
+          console.log("[registry] " + registryId + " " + count + " 项" +
+            (injected ? "，注入/修正 " + fixed + (modded ? "（其中模组 " + modded + "）" : "") : "（无对应表，仅缓存）"));
         }
-        if (rid === "minecraft:item") global.__itemMap = names;
-        console.log("[registry] " + rid + " " + count + " 项" +
-          (hint ? "，注入/修正 " + fixed + (modded ? "（其中模组 " + modded + "）" : "") : "（无对应表，仅缓存）"));
 
         // 快照落盘（防抖 2s，抓完整一轮同步；供离线对比/排查）
-        clearTimeout(global.__regSaveT);
-        global.__regSaveT = setTimeout(() => {
-          try { fs.writeFileSync(path.join(HERE, "payload-dump", "registry-maps.json"), JSON.stringify(global.__regMaps)); } catch (_) {}
-          try { if (global.__regMaps["minecraft:item"]) fs.writeFileSync(path.join(HERE, "payload-dump", "item-id-map.json"), JSON.stringify(global.__regMaps["minecraft:item"])); } catch (_) {}
+        clearTimeout(regSaveTimer);
+        regSaveTimer = setTimeout(() => {
+          try { REG.dump(path.join(HERE, "payload-dump")); } catch (_) {}
         }, 2000);
       } catch (e) { console.log("[registry] frozen_registry 解析失败:", e.message); }
     } else if (ch === "neoforge:feature_flags") {
@@ -3007,7 +2980,7 @@ function bdFindItem(itemName) {
   }
   // 3) 名字匹配（未知物品回落到 frozen_registry 解析出的英文 id）
   const lower = String(itemName || "").trim().toLowerCase();
-  const nm = (it) => ((it && it.name && it.name !== "unknown") ? it.name : ((global.__itemMap && it) ? (global.__itemMap[it.type] || "") : "")).toLowerCase();
+  const nm = (it) => ((it && it.name && it.name !== "unknown") ? it.name : ((REG.itemMap && it) ? (REG.itemMap[it.type] || "") : "")).toLowerCase();
   let f = items.find((it) => nm(it).includes(lower));
   if (!f) f = items.find((it) => it.displayName && String(it.displayName).toLowerCase().includes(lower));
   return f || null;
@@ -3041,7 +3014,7 @@ async function bdWithdraw(itemName, count) {
   client.write("custom_payload", { channel: "beyonddimensions:pick_block_from_net_packet", data: body });
   await sleep(650);
   const got = bot.heldItem;
-  const name = (bot.registry.items[id] && bot.registry.items[id].name) || (global.__itemMap && global.__itemMap[id]) || itemName;
+  const name = (bot.registry.items[id] && bot.registry.items[id].name) || (REG.itemMap && REG.itemMap[id]) || itemName;
   if (!got || got.type !== id) {
     console.log("[BD] 取物失败：" + itemName + "（主手=" + (got ? got.name : "空") + "）");
     return { ok: false, action: "bd_withdraw", requested: itemName, error: "网络里没有该物品或取物失败" };
@@ -3061,7 +3034,7 @@ function netCollectSlots(window, slots) {
     if (!s || !s.type || !s.count) continue;
     const nm = (s.name && s.name !== "unknown") ? s.name
       : (bot.registry.items[s.type] && bot.registry.items[s.type].name)
-      || (global.__itemMap && global.__itemMap[s.type]) || ("#" + s.type);
+      || (REG.itemMap && REG.itemMap[s.type]) || ("#" + s.type);
     out.push({ slot: (s.slot != null ? s.slot : i), item: nm, count: s.count, type: s.type });
   }
   return out;
@@ -3118,7 +3091,7 @@ function decodeBdNetSync(buf) {
 // 用于"网络里有哪些东西"——精确计数目前受模组自定义组件阻塞。
 const BD_KEY_PREFIX = Buffer.from("\x20beyonddimensions:stack_type/item", "latin1");
 function scanBdNetNames() {
-  const buf = global.__bdNetSync;
+  const buf = bdNetSync;
   if (!buf) return null;
   const names = [];
   let i = buf.indexOf(BD_KEY_PREFIX);
@@ -3139,7 +3112,7 @@ function scanBdNetNames() {
 }
 
 function bdNetSummary() {
-  const buf = global.__bdNetSync;
+  const buf = bdNetSync;
   if (!buf) return null;
   const d = decodeBdNetSync(buf);
   const summary = {};
@@ -3200,7 +3173,7 @@ async function netGiveToPlayer(query, count, playerName) {
   const id = bdResolveItemId(query);
   if (id == null) return { ok: false, error: "无法解析物品：" + query };
   const name = (bot.registry.items[id] && bot.registry.items[id].name)
-    || (global.__itemMap && global.__itemMap[id]) || String(query);
+    || (REG.itemMap && REG.itemMap[id]) || String(query);
   const want = Math.max(1, Math.min(Number(count) || 1, 64));
   // 1) 主手必须空
   if (bot.heldItem) { try { await bot.unequip("hand"); } catch (e) { } await sleep(200); }
@@ -4844,9 +4817,8 @@ const bridge = http.createServer((req, res) => {
               else if (String(nm).includes(":")) modItems.push({ id, name: nm }); // 规范化后原版名不带冒号
             }
             const registries = {};
-            for (const rid in (global.__regMaps || {})) {
-              const m = global.__regMaps[rid] || [];
-              registries[rid] = m.filter(Boolean).length;
+            for (const rid of REG.ids()) {
+              registries[rid] = (REG.get(rid) || []).filter(Boolean).length;
             }
             out = {
               ok: true, action: "registry_dump",
@@ -4854,7 +4826,7 @@ const bridge = http.createServer((req, res) => {
               modItems: a.all ? modItems : modItems.slice(0, Number(a.limit ?? 40)),
               unknownIds,
               registries,
-              savedAt: global.__regSaveT ? "已排程落盘" : null
+              savedAt: regSaveTimer ? "已排程落盘" : null
             };
             break;
           }
@@ -4955,9 +4927,9 @@ const bridge = http.createServer((req, res) => {
           case "bd_read_net": out = await bdReadNet(); break;
           case "bd_net_dump": {
             // 把缓存的网络存储同步包落盘 + 回报解析进度，便于离线分析
-            if (!global.__bdNetSync) { out = { ok: false, error: "还没有缓存到同步包，先执行 bd_read_net" }; break; }
+            if (!bdNetSync) { out = { ok: false, error: "还没有缓存到同步包，先执行 bd_read_net" }; break; }
             try {
-              const buf = global.__bdNetSync;
+              const buf = bdNetSync;
               fs.mkdirSync(path.join(HERE, "payload-dump"), { recursive: true });
               fs.writeFileSync(path.join(HERE, "payload-dump", "bd-net-sync.hex"), buf.toString("hex"));
               const d = decodeBdNetSync(buf);

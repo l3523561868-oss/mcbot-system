@@ -1,18 +1,28 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-02T13:05:53.267Z",
-  "reason": "契约 1.1.0：服务/状态贡献；xp-guard 迁出核心",
+  "updatedAt": "2026-11-02T13:12:42.192Z",
+  "reason": "auto-protect core/*.mjs：新增 codec/registry 并纳入自动保护",
   "growthLimit": 1.05,
   "files": {
+    "src/bot/core/addons.mjs": {
+      "tier": "core",
+      "sha256": "9ffb42dca8c6defbbc6b30e955401cda4333326184ab0e9e8b664cf396c0968c",
+      "lines": 54
+    },
+    "src/bot/core/codec.mjs": {
+      "tier": "core",
+      "sha256": "004ad6e077e9ccaa9394209f49ec8d5d20216acf39cdf0dc2a57c6ad3b5a80f0",
+      "lines": 74
+    },
     "src/bot/core/contract.mjs": {
       "tier": "core",
       "sha256": "f25b3500e7a7337b58bfac4105712b4d46ef0313b1dd5db1684f0bebb1ad65ee",
       "lines": 181
     },
-    "src/bot/core/addons.mjs": {
+    "src/bot/core/registry.mjs": {
       "tier": "core",
-      "sha256": "9ffb42dca8c6defbbc6b30e955401cda4333326184ab0e9e8b664cf396c0968c",
-      "lines": 54
+      "sha256": "df3bcd9658fd317fb9a1e6baa15e07ea008560d19481a629363d8704e2dd4a70",
+      "lines": 100
     },
     "src/bot/capture/channel-capture.json": {
       "tier": "core",
@@ -31,8 +41,8 @@
     },
     "src/bot/forge-live.mjs": {
       "tier": "stable",
-      "sha256": "25b204ded8a403fd4e44105796d09fde9396b0f67b3642e169b4fa24edfa8f42",
-      "lines": 5048
+      "sha256": "d87e9770a59cee105d08a357457ba6d59588e22a387a3fa3b0aaed8e72a2413b",
+      "lines": 5020
     },
     "src/console/console.py": {
       "tier": "stable",

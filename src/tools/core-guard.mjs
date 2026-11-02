@@ -25,9 +25,7 @@ const LOCK = path.join(ROOT, "src", "bot", "core", "CORE.lock");
 const GROWTH_LIMIT = 1.05;   // 核心文件增长超过 5% 告警
 
 /** tier=core：改动必须 --update；tier=stable：同样需签入，但允许合理演进 */
-const PROTECTED = [
-  { path: "src/bot/core/contract.mjs", tier: "core" },
-  { path: "src/bot/core/addons.mjs", tier: "core" },
+const FIXED = [
   { path: "src/bot/capture/channel-capture.json", tier: "core" },
   { path: "src/bot/capture/known-packs-real.json", tier: "core" },
   { path: "src/bot/channel-specs.json", tier: "core" },
@@ -36,6 +34,15 @@ const PROTECTED = [
   { path: "src/console/adapters.py", tier: "stable" },
   { path: "src/console/index.html", tier: "stable" },
 ];
+
+// core/ 下所有 .mjs 自动纳入保护：新增核心文件不会因为"忘了登记"而漏保护
+const CORE_DIR = path.join(ROOT, "src", "bot", "core");
+const AUTO = (fs.existsSync(CORE_DIR) ? fs.readdirSync(CORE_DIR) : [])
+  .filter((f) => f.endsWith(".mjs"))
+  .sort()
+  .map((f) => ({ path: `src/bot/core/${f}`, tier: "core" }));
+
+const PROTECTED = [...AUTO, ...FIXED];
 
 const args = process.argv.slice(2);
 const asJson = args.includes("--json");

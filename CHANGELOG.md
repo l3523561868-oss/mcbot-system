@@ -16,6 +16,15 @@
   索要 `neoforge:register` 并解码成 `channel-capture.json`（离线、不联网、不碰凭证）。
 - `docs/01-部署流程/06` 新增「跨网络：用内网穿透（樱花 frp 等）连接朋友的存档」：三步配置、四个坑、更稳的替代。
 
+### 新增（架构 · 阶段③ + 自检）
+
+- `core/codec.mjs`：线格式纯函数（`readVarInt` / `readUtf` / `writeVarInt` / `writeUtf` /
+  `decodeRegistryPayload`），脏数据返回 `null` 而不是抛错。
+- `core/registry.mjs`：`RegistryStore`（实例持有状态）+ `injectIntoPrismarine`（给定 reg 就注入），
+  取代 `global.__regMaps` / `__itemMap` / `__frzCount` / `__bdNetSync` —— 核心数据不再挂 global。
+- `src/tools/selftest.mjs`：21 项零依赖自检（含真实 prismarine-registry 注入验证），`npm --prefix src/bot test`。
+- `scripts/selftest.bat`：双击跑自检。
+
 ### 新增（架构 · 契约 1.1.0）
 
 - `core/contract.mjs`：新增**能力服务**（`registerService` / `getService`）与**状态贡献**

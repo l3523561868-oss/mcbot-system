@@ -1,1 +1,13 @@
-{"name":"proto-bot-local","private":true,"type":"module","dependencies":{"mineflayer":"4.39.0","mineflayer-pathfinder":"2.4.5","minecraft-protocol":"1.68.0"}}
+{
+  "name": "proto-bot-local",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "mineflayer": "4.39.0",
+    "mineflayer-pathfinder": "2.4.5",
+    "minecraft-protocol": "1.68.0"
+  },
+  "scripts": {
+    "test": "node ../tools/selftest.mjs"
+  }
+}
