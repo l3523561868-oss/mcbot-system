@@ -14,7 +14,8 @@ import path from "path";
 import url from "url";
 import crypto from "crypto";
 // ---- 核心契约层（受保护；附加功能请写 addons/，不要改这里）----
-import { EVENTS, emit as coreEmit, dispatchAction as coreDispatch } from "./core/contract.mjs";
+import { EVENTS, emit as coreEmit, dispatchAction as coreDispatch,
+         registerService as coreRegisterService, collectState as coreCollectState } from "./core/contract.mjs";
 import { loadAddons } from "./core/addons.mjs";
 
 const [hostArg, portArg, userArg] = process.argv.slice(2);
@@ -520,7 +521,6 @@ function startBot() {
     startChatMonitor();   // 聊天监视：无需 @，bot 主动加入玩家对话（定时扫描聊天缓冲）
     startWaystoneEye();   // 石碑之眼：识别附近普通传送石碑并自动激活（WAYSTONE_EYE_OFF=1 可关）
     startAntiAfk();       // 反挂机：定期微转视角/小跳，避免被服务端按 AFK 踢（ANTI_AFK_OFF=1 可关）
-    startXpGuard();       // 经验守护：等级<50 时自动前往淋浴间（262,-1147）吸收经验球
     startDurabilityGuard(); // 耐久守护：装备耐久<35% 自动去淋浴间用经验修补修复
   });
   bot.on("death", () => {
@@ -2502,58 +2502,10 @@ function onBotHurt(source) {
   tryRetaliateSwing(attacker);
 }
 
-// 3) 经验守护：经验等级 < 50 时自动前往「淋浴间」黑色石碑（262,-1147）附近吸收经验球
-const XP_LOW_LEVEL = Number(process.env.XP_LOW_LEVEL ?? 50); // 阈值，可用环境变量 XP_LOW_LEVEL 覆盖（测试用）
+// 3) 经验守护已迁至 addons/xp-guard.mjs（策略在插件，原语在核心）。
+//    这里只保留坐标常量：耐久守护与 config 服务仍在用。
+const XP_LOW_LEVEL = Number(process.env.XP_LOW_LEVEL ?? 50);
 const XP_SPOT = { x: 262, y: 78, z: -1147, name: "淋浴间" };
-let xpGuardEnabled = process.env.XP_GUARD !== "0"; // 开关，默认开启；环境变量 XP_GUARD=0 全局关闭
-let xpGuardTimer = null;
-let xpGuardMoving = false;
-let xpGuardUsing = false;
-let xpGuardLastReport = 0;
-function xpGuardCheck() {
-  try {
-    if (!xpGuardEnabled) return; // 开关关闭时不做任何事
-    if (!bot || !bot.entity || !authed) return;
-    const exp = bot.experience;
-    if (!exp || typeof exp.level !== "number") return; // 经验包尚未同步
-    if (exp.level >= XP_LOW_LEVEL) { xpGuardMoving = false; return; }
-    // 优先使用背包里的经验物品（经验瓶/经验颗粒），没有再去淋浴间
-    if (findXpItem()) {
-      if (!xpGuardUsing) {
-        xpGuardUsing = true;
-        useXpItems(64).then((n) => {
-          xpGuardUsing = false;
-          if (n > 0) announce("[经验] 使用了 " + n + " 个经验物品补充经验（当前等级 " + (bot?.experience?.level ?? "?") + "）");
-        });
-      }
-      return;
-    }
-    const p = bot.entity.position;
-    const dist = Math.hypot(p.x - XP_SPOT.x, p.z - XP_SPOT.z);
-    if (dist <= 8) { // 已在淋浴间附近 → 站着等经验球自动飞来
-      if (xpGuardMoving) { xpGuardMoving = false; console.log("[xpguard] 已到淋浴间附近，等待吸收经验球"); }
-      return;
-    }
-    if (xpGuardMoving) return; // 正在赶路中
-    xpGuardMoving = true;
-    const now = Date.now();
-    if (now - xpGuardLastReport > 60000) {
-      xpGuardLastReport = now;
-      announce("[经验] 等级 " + exp.level + " 低于 " + XP_LOW_LEVEL + "，前往淋浴间补充经验（" + Math.round(dist) + " 格）");
-    }
-    console.log("[xpguard] level=" + exp.level + " < " + XP_LOW_LEVEL + "，前往淋浴间 @" + XP_SPOT.x + "," + XP_SPOT.z);
-    myBotGoto(XP_SPOT.x, XP_SPOT.y, XP_SPOT.z, 4);
-    setTimeout(() => {
-      if (!bot || !bot.entity) { xpGuardMoving = false; return; }
-      const d2 = Math.hypot(bot.entity.position.x - XP_SPOT.x, bot.entity.position.z - XP_SPOT.z);
-      if (d2 > 8) { xpGuardMoving = false; console.log("[xpguard] 尚未到位（剩 " + d2.toFixed(0) + " 格），下次检查继续"); }
-    }, 30000);
-  } catch (e) { console.log("[xpguard] 失败:", e.message); }
-}
-function startXpGuard() {
-  if (xpGuardTimer) return;
-  xpGuardTimer = setInterval(xpGuardCheck, 15000); // 每 15 秒检查一次
-}
 
 // 4) 装备耐久监测 + 自动修补（经验修补）：耐久低于阈值 → 去淋浴间吸经验球，由经验修补自动修复
 // 阈值：DURABILITY_LOW（默认 0.35 = 剩余 35%）触发；DURABILITY_HIGH（默认 0.85）视为修满。DURABILITY_GUARD=0 关闭。
@@ -3876,6 +3828,7 @@ const bridge = http.createServer((req, res) => {
       night: bot?.time ? { timeOfDay: bot.time.timeOfDay, isNight: isNightTime(), sleeping: !!bot.isSleeping } : null,
       entity_groups: ents.groups.length ? ents.groups : null,
       entities: ents.nearest.length ? ents.nearest.map((e) => ({ name: e.name, type: e.type, dist: e.dist })) : null,
+      ...coreCollectState(),
       chat: chatBuf.slice(-12),
     }));
     return;
@@ -4920,24 +4873,6 @@ const bridge = http.createServer((req, res) => {
             out = { ok: true, count: its.length, items: its };
             break;
           }
-          case "xpguard": {
-            // 经验守护开关：{enabled:true/false} 启用/关闭；不带参数返回当前状态
-            if (typeof a.enabled === "boolean") {
-              xpGuardEnabled = a.enabled;
-              if (!xpGuardEnabled) xpGuardMoving = false; // 关闭时清掉赶路状态
-              console.log("[xpguard] 开关 → " + (xpGuardEnabled ? "开启" : "关闭"));
-            }
-            out = {
-              ok: true,
-              action: "xpguard",
-              enabled: xpGuardEnabled,
-              lowLevel: XP_LOW_LEVEL,
-              spot: XP_SPOT,
-              level: bot?.experience?.level ?? null,
-              moving: xpGuardMoving,
-            };
-            break;
-          }
           case "greet": {
             // 手动触发一次随机问候（在线且有其他玩家时生效；会话窗口 10 分钟）
             tryRandomGreet();
@@ -5074,6 +5009,24 @@ const bridge = http.createServer((req, res) => {
   res.statusCode = 404;
   res.end('{"error":"use GET /state or POST action"}');
 });
+// ---- 能力服务：把"原语"暴露给 addon，addon 只写策略，不碰协议 ----
+coreRegisterService("bot", {
+  get: () => bot,
+  goto: (x, y, z, range = 4) => myBotGoto(x, y, z, range),
+  say: (text) => announce(String(text || "")),
+  isAuthed: () => !!authed,
+  isOnline: () => !!(bot && bot.entity),
+});
+coreRegisterService("items", {
+  findXp: () => findXpItem(),
+  useXp: (n = 64) => useXpItems(n),
+});
+coreRegisterService("config", {
+  xpSpot: { ...XP_SPOT },
+  xpLowLevel: XP_LOW_LEVEL,
+  version: MC_VERSION,
+});
+
 // ---- 附加模块：只通过契约接入，加载失败不影响核心 ----
 loadAddons({
   dir: path.join(HERE, "addons"),

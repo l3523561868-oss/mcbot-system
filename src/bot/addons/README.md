@@ -35,6 +35,8 @@ curl -X POST -d '{"type":"my_action","foo":1}' http://127.0.0.1:8801/
 | `ctx.log(msg)` | 带前缀的输出 |
 | `ctx.config` | 本文件导出的 `export const config = {...}` |
 | `ctx.contractVersion` | 契约版本，便于做兼容判断 |
+| `ctx.service(name)` | 取核心能力服务：`bot`（get/goto/say/isAuthed/isOnline）、`items`（findXp/useXp）、`config`（xpSpot/xpLowLevel/version） |
+| `ctx.contributeState(key, fn)` | 往 `/state` 加字段，页面/控制台可直接读 |
 
 ## 硬性约束（`core-guard` 会检查）
 
@@ -54,3 +56,4 @@ curl -X POST -d '{"type":"my_action","foo":1}' http://127.0.0.1:8801/
 | 文件 | 作用 | 开关 |
 |---|---|---|
 | `example-gamemode.mjs` | 进服后自动 `/gamemode <mode>`，并注册 `addon_gamemode` 动作 | `ADDON_GAMEMODE=creative` |
+| `xp-guard.mjs` | 经验守护（原核心功能迁入）：低等级用经验物品，否则去淋浴间吸经验球；注册 `xpguard` 动作，并向 `/state` 贡献 `xpguard` 字段 | `XP_GUARD=0` 关闭，`XP_LOW_LEVEL` 调阈值 |

@@ -16,6 +16,13 @@
   索要 `neoforge:register` 并解码成 `channel-capture.json`（离线、不联网、不碰凭证）。
 - `docs/01-部署流程/06` 新增「跨网络：用内网穿透（樱花 frp 等）连接朋友的存档」：三步配置、四个坑、更稳的替代。
 
+### 新增（架构 · 契约 1.1.0）
+
+- `core/contract.mjs`：新增**能力服务**（`registerService` / `getService`）与**状态贡献**
+  （`contributeState` / `collectState`），addon 不再需要接触核心内部函数。
+- `addons/xp-guard.mjs`：经验守护从核心迁出（核心 -47 行）。策略（阈值/物品优先/播报节奏）在插件，
+  原语（`goto` / `say` / 物品使用）由核心以服务暴露；`xpguard` 动作与 `/state` 字段保持兼容。
+
 ### 新增（架构）
 
 - 核心契约层 `src/bot/core/contract.mjs`：事件总线（spawn/death/disconnect/chat/tick/action）+ 动作注册表，

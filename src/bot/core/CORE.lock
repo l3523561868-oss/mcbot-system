@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-02T12:59:51.757Z",
-  "reason": "引入契约层与 addons 加载器，冻结核心边界",
+  "updatedAt": "2026-11-02T13:05:53.267Z",
+  "reason": "契约 1.1.0：服务/状态贡献；xp-guard 迁出核心",
   "growthLimit": 1.05,
   "files": {
     "src/bot/core/contract.mjs": {
       "tier": "core",
-      "sha256": "d44f3b4d7774d0207f2def526682e8d615fd68ef3f279dc857d4164e801a9deb",
-      "lines": 126
+      "sha256": "f25b3500e7a7337b58bfac4105712b4d46ef0313b1dd5db1684f0bebb1ad65ee",
+      "lines": 181
     },
     "src/bot/core/addons.mjs": {
       "tier": "core",
-      "sha256": "ae20c04cd21304e0c01b1a8419617d5d0dd540e0fc4a0741fd6515669619b12c",
-      "lines": 52
+      "sha256": "9ffb42dca8c6defbbc6b30e955401cda4333326184ab0e9e8b664cf396c0968c",
+      "lines": 54
     },
     "src/bot/capture/channel-capture.json": {
       "tier": "core",
@@ -31,8 +31,8 @@
     },
     "src/bot/forge-live.mjs": {
       "tier": "stable",
-      "sha256": "0220c4a83c7dcbdd80e32265080fe2246f0ea6784598a3256902bc94e6f12ae5",
-      "lines": 5095
+      "sha256": "25b204ded8a403fd4e44105796d09fde9396b0f67b3642e169b4fa24edfa8f42",
+      "lines": 5048
     },
     "src/console/console.py": {
       "tier": "stable",

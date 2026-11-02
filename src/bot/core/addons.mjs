@@ -11,7 +11,7 @@
  */
 import fs from "fs";
 import path from "path";
-import { on, registerAction, CONTRACT_VERSION } from "./contract.mjs";
+import { on, registerAction, contributeState, getService, CONTRACT_VERSION } from "./contract.mjs";
 
 export async function loadAddons({ dir, ctx, log = console.log }) {
   if (!fs.existsSync(dir)) return [];
@@ -32,6 +32,8 @@ export async function loadAddons({ dir, ctx, log = console.log }) {
         ...ctx,
         on: (event, fn, opts = {}) => on(event, fn, { ...opts, label }),
         registerAction: (name, fn, opts = {}) => registerAction(name, fn, { ...opts, label }),
+        contributeState: (key, fn, opts = {}) => contributeState(key, fn, { ...opts, label }),
+        service: (name) => getService(name),
         config: mod.config || {},
         contractVersion: CONTRACT_VERSION,
       });

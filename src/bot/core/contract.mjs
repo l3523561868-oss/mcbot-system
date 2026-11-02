@@ -12,7 +12,7 @@
  *   - 导出的常量对象必须 Object.freeze。
  */
 
-export const CONTRACT_VERSION = "1.0.0";
+export const CONTRACT_VERSION = "1.1.0";   // 1.1.0: 新增 service / state 贡献
 export const BRIDGE_PROTOCOL = 1;
 
 /** 核心会发出的事件（新增事件属于契约变更，需 bump CONTRACT_VERSION） */
@@ -110,6 +110,59 @@ export function actionNames() {
   return [...actions.keys()];
 }
 
+// ---------- 能力服务：核心把"原语"暴露给 addon，addon 只写策略 ----------
+const services = new Map();
+
+/**
+ * 注册能力服务（核心侧调用）。addon 只能读取，不能替换核心已注册的键。
+ * @param {string} name 如 "bot" / "items" / "config"
+ * @param {object} api 方法集合（会被浅拷贝并冻结）
+ */
+export function registerService(name, api, opts = {}) {
+  if (services.has(name) && !opts.replace) {
+    noteError("registerService", new Error(`服务 ${name} 已注册，忽略`));
+    return false;
+  }
+  services.set(name, Object.freeze({ ...api }));
+  return true;
+}
+
+export function getService(name) {
+  return services.get(name);
+}
+
+export function serviceNames() {
+  return [...services.keys()];
+}
+
+// ---------- 状态贡献：addon 往 /state 里加字段（核心不解析其含义） ----------
+const stateContribs = new Map();
+
+/**
+ * 让 addon 往 /state 注入字段。
+ * @param {string} key 字段名
+ * @param {() => any} fn 返回该字段的值（会被 try/catch 包裹）
+ */
+export function contributeState(key, fn, opts = {}) {
+  if (typeof key !== "string" || !key) throw new TypeError("contributeState：key 必须是非空字符串");
+  if (typeof fn !== "function") throw new TypeError("contributeState：fn 必须是函数");
+  if (stateContribs.has(key) && !opts.replace) {
+    noteError("contributeState", new Error(`状态字段 ${key} 已被占用，忽略`));
+    return false;
+  }
+  stateContribs.set(key, { fn, label: opts.label || "addon" });
+  return true;
+}
+
+/** 核心拼 /state 时调用；任何贡献者抛错只记日志，不污染整个响应。 */
+export function collectState() {
+  const out = {};
+  for (const [key, item] of stateContribs) {
+    try { out[key] = item.fn(); } catch (e) { noteError(`${item.label}@state:${key}`, e); }
+  }
+  return out;
+}
+
 /** 供 /state 之类做自检：核心只暴露计数，不暴露订阅者对象。 */
 export function contractStatus() {
   return Object.freeze({
@@ -118,6 +171,8 @@ export function contractStatus() {
     events: Object.keys(EVENTS).length,
     listeners: [...listeners.values()].reduce((n, l) => n + l.length, 0),
     actions: actions.size,
+    services: services.size,
+    stateFields: stateContribs.size,
     emitted: stats.emitted,
     errors: stats.errors,
     lastErrors: stats.lastErrors.slice(-5),
