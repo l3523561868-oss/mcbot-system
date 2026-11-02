@@ -24,6 +24,8 @@
   取代 `global.__regMaps` / `__itemMap` / `__frzCount` / `__bdNetSync` —— 核心数据不再挂 global。
 - `src/tools/selftest.mjs`：21 项零依赖自检（含真实 prismarine-registry 注入验证），`npm --prefix src/bot test`。
 - `scripts/selftest.bat`：双击跑自检。
+- `src/tools/smoke-live.mjs` + `scripts/smoke.bat`：**真服回归**——起临时 bot 连真实服务器，断言
+  握手/注册表注入/在线/插件加载四项，失败打印上下文。实测两次通过（21s/47s），注册表 27093 项与重构前一致。
 
 ### 新增（架构 · 契约 1.1.0）
 
