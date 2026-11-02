@@ -41,7 +41,7 @@
   .logo{width:15px;height:15px;flex:none;
     background:linear-gradient(#4ade80 0 45%, #8a6642 45% 100%);
     box-shadow:0 0 12px rgba(74,222,128,.55), inset 0 0 0 1px rgba(0,0,0,.5);}
-  .pill{padding:1px 9px;border:1px solid rgba(255,255,255,.10);border-radius:3px;
+  .pill{padding:1px 9px;border:1px solid rgba(255,255,255,.10);border-radius:3px;white-space:nowrap;
     background:rgba(255,255,255,.04);color:var(--muted);font-size:11.5px}
   .col{display:flex;flex-direction:column;gap:13px;min-width:0}
   .panel{
@@ -602,7 +602,7 @@ function render(){
         <span><span class="pill" style="color:${stt.c}">${esc(stt.t)}</span>
         <span class="pill">${esc(b.kind)}</span>${STATE.manage ? `<span class="pill" style="color:${b.proc?'#34d399':'#5b6472'}">进程${b.proc?'运行':'停止'}</span>` : ''}</span></div>
       <div class="kv">坐标 <span class="xyz">${pos}</span> ｜ 血 ${num(b.health,0)} ｜ 饥饿 ${num(b.food,0)}</div>
-      <div class="kv">模式 ${b.mode ?? '—'} ｜ <b style="color:#c4b5fd">等级 ${b.experience ? (b.experience.level ?? 0) : '—'}（${b.experience ? (b.experience.points ?? 0) : 0} 点）</b> ｜ 登录 ${b.authed === true ? '✓' : (b.authed === false ? '✗' : '—')}</div><div class="kv">${esc(b.base)}${b.target?` ｜ 目标 <b style="color:#93c5fd">${esc(b.target)}</b>`:''}</div>${STATE.manage?`<div class="rowbtn"><input class="tin" id="tg_${esc(b.id)}" placeholder="host:port（如 frp-fun.com:30177）" value="${esc(b.target||'')}"><button class="btn s" onclick="setTarget('${esc(b.id)}')">连接此服务器</button></div>`:''}
+      <div class="kv">模式 ${b.mode ?? '—'} ｜ <b style="color:#c4b5fd">等级 ${b.experience ? (b.experience.level ?? 0) : '—'}（${b.experience ? (b.experience.points ?? 0) : 0} 点）</b> ｜ 登录 ${b.authed === true ? '✓' : (b.authed === false ? '✗' : '—')}</div><div class="kv">${esc(b.base)}</div>${b.target?`<div class="kv">目标 <b style="color:#93c5fd">${esc(b.target)}</b></div>`:''}${STATE.manage?`<div class="rowbtn"><input class="tin" id="tg_${esc(b.id)}" placeholder="host:port（如 frp-fun.com:30177）" value="${esc(b.target||'')}"><button class="btn s" onclick="setTarget('${esc(b.id)}')">连接此服务器</button></div>`:''}
       ${b.error?`<div class="kv bad">${esc(b.error)}</div>`:''}
       ${b.last_action?`<div class="kv">最近：${esc(b.last_action)}</div>`:''}
       ${STATE.readonly ? '' : `<div class="rowbtn">
