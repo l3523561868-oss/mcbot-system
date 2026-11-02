@@ -1,0 +1,24 @@
+name: core
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  guard:
+    name: 核心守卫 + 自检
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: 核心指纹 / 依赖方向 / 体积
+        run: node src/tools/core-guard.mjs
+
+      - name: 核心自检（线格式 / 注册表 / 契约 / addon）
+        run: node src/tools/selftest.mjs

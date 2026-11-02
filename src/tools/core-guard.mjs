@@ -52,7 +52,10 @@ const reason = (() => {
   return i >= 0 && args[i + 1] ? args[i + 1] : "";
 })();
 
-const sha = (p) => crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+// 统一按 LF 计算：Windows(CRLF) 与 CI(Linux, LF) 的签名必须一致
+const sha = (p) => crypto.createHash("sha256")
+  .update(fs.readFileSync(p).toString("binary").replace(/\r\n/g, "\n"), "binary")
+  .digest("hex");
 const lines = (p) => fs.readFileSync(p, "utf8").split("\n").length;
 
 function loadLock() {

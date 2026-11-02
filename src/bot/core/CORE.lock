@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-02T13:12:42.192Z",
-  "reason": "auto-protect core/*.mjs：新增 codec/registry 并纳入自动保护",
+  "updatedAt": "2026-11-02T13:13:06.829Z",
+  "reason": "哈希改为按 LF 归一化，保证 Windows 与 CI 签名一致",
   "growthLimit": 1.05,
   "files": {
     "src/bot/core/addons.mjs": {
@@ -36,7 +36,7 @@
     },
     "src/bot/channel-specs.json": {
       "tier": "core",
-      "sha256": "500f3ef8b7ad4366c80d1f435fe8fd22b873bdd7e9d1d96e7a0a2260c05c6d73",
+      "sha256": "77257d47498e87afc37cbb0cdf474b2058b4cab2ca9d945156a053f87768294c",
       "lines": 11
     },
     "src/bot/forge-live.mjs": {
@@ -51,7 +51,7 @@
     },
     "src/console/adapters.py": {
       "tier": "stable",
-      "sha256": "37b253b04c177a3e9046aa3234e30d5009a46e44314567ebf202c3d643659f7c",
+      "sha256": "f181eff18a5dee3640bf039093f2a33ea920763bcf5c628f759f2f0ba6554bad",
       "lines": 198
     },
     "src/console/index.html": {
