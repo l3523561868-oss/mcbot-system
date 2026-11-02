@@ -21,6 +21,7 @@
 - 每只 bot 卡片可填 **`host:port` 一键切换服务器**：进程在跑则自动重启，未跑则保存到
   `bots.json` 的 `target` 字段；启动时自动带 `XP_GUARD=0` 与私有通道表（`MC_CAPTURE`）。
 - 接口 `POST /api/target`；仅 `--manage` 模式可用。
+- 右上角「**停止全部**」：逐个结束本控制台拉起的 bot 后自行退出（`POST /api/shutdown`，需 `confirm=yes`）。
 
 ### 修复
 

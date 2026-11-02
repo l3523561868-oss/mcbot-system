@@ -691,6 +691,22 @@ class Handler(BaseHTTPRequestHandler):
             return self._send({"ok": True, "saved": True, "target": bot["target"],
                                "note": "已保存；点「开进程」后生效"})
 
+        if p == "/api/shutdown":
+            if not MANAGE:
+                return self._send({"ok": False, "error": "本机未开启 --manage"}, 403)
+            if body.get("confirm") != "yes":
+                return self._send({"ok": False, "error": "需要 confirm=yes"})
+            stopped = []
+            for b in list(BOTS):
+                port = int(b.get("bridge_port") or 0)
+                if port and _pid_on_port(port):
+                    ok, _ = stop_bot(b)
+                    stopped.append({"id": b["id"], "ok": ok})
+            log("PROC", f"停止全部：{len(stopped)} 个 bot，控制台退出")
+            self._send({"ok": True, "stopped": stopped, "exit": True})
+            threading.Timer(1.0, lambda: os._exit(0)).start()
+            return
+
         if p == "/api/report":
             # 反向接入上报：{bot:{id,name,kind}, state:{...}, chat:[{ts,who,text}]}
             rb = body.get("bot") or {}

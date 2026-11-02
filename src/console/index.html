@@ -244,6 +244,7 @@
   <span class="pill" id="hLang">0 条语言</span>
   <span class="pill" id="hMode"></span>
   <button class="btn s" onclick="load()">刷新</button>
+  <button class="btn s" id="btnShutdown" style="display:none;color:#f87171;border-color:rgba(248,113,113,.35)" onclick="shutdownAll()">停止全部</button>
 </header>
 
 <div id="view-home" class="view home">
@@ -616,6 +617,9 @@ function render(){
     </div>`;
   }).join('') : '<div class="empty">尚未注册 bot</div>';
 
+  const bs = document.getElementById('btnShutdown');
+  if (bs) bs.style.display = STATE.manage ? '' : 'none';
+
   const sel = document.getElementById('tBot');
   const keep = sel.value;
   sel.innerHTML = STATE.bots.map(b=>`<option value="${esc(b.id)}">${esc(b.name||b.id)}</option>`).join('');
@@ -781,7 +785,17 @@ async function procBot(id, action){
   setTimeout(load, action === 'start' ? 2500 : 800);
 }
 
-async function setTarget(id){
+async function shutdownAll(){
+  if(!confirm('结束所有 bot 进程并关闭控制台？')) return;
+  post('/api/shutdown', {confirm:'yes'}).then(r=>{
+    if(!(r && r.ok)){ alert('停止失败：' + ((r && r.error) || '未知')); return; }
+    const n = (r.stopped || []).length;
+    alert('已停止 ' + n + ' 个 bot，控制台即将关闭。\n可以关掉这个页面了。');
+    document.body.innerHTML = '<div style="padding:60px;font-size:16px;color:#9aa6b8">控制台已关闭（停止了 ' + n + ' 个 bot）。此页面可以关掉了。</div>';
+  });
+}
+
+function setTarget(id){
   const el = document.getElementById('tg_' + id);
   const t = ((el && el.value) || '').trim();
   if(!/^[^\s:]+:\d{1,5}$/.test(t)){
