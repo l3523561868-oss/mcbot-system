@@ -102,7 +102,7 @@ echo [i] bridge port %BRIDGE_PORT%  -^>  console base: http://127.0.0.1:%BRIDGE_
 set "BOT_PW="
 set "BOT_REG=0"
 set "COMBAT_OFF=1"
-set "XP_LOW_LEVEL=0"
+set "XP_GUARD=0"
 node forge-live.mjs "%IP%" "%PORT%" "%NAME%"
 
 echo.

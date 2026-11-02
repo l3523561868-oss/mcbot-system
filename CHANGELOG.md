@@ -10,12 +10,19 @@
   （默认 `mc.example.com:25565`），同一整合包可复用同一份通道表，控制台无需改动。
 - `docs/01-部署流程/06` 新增「同一份整合包，同时连服务器与局域网」：切换目标、并行双目标、两条边界。
 - `scripts/connect-lan.bat`：双击输入主机 + LAN 端口即可连本地世界（ASCII + CRLF，避免 cmd 解析乱码）。
+- `src/bot/capture-relay.mjs`：中转抓包（真客户端 → 本地中转 → 真实服务器），
+  解决真客户端拒绝"非 NeoForge 假服务端"的问题。
 - `src/bot/capture-client.mjs`：用**真实客户端**抓通道表——起一个只做登录的假服务端，
   索要 `neoforge:register` 并解码成 `channel-capture.json`（离线、不联网、不碰凭证）。
 - `docs/01-部署流程/06` 新增「跨网络：用内网穿透（樱花 frp 等）连接朋友的存档」：三步配置、四个坑、更稳的替代。
 
 ### 修复
 
+- **flow 编码**：抓包中 `flow` 为空（`0x00` = 未指定）时不再强行补成 `CLIENTBOUND`，
+  只在 `channel-specs.json` 明确给出方向时使用。此前会导致 `negotiation.failure.flow.server.missing`。
+- **frozen_registry 解析**：调试转储改为 `DEBUG_DUMP=1` 才写盘，且目录缺失不再中断解析
+  （此前新克隆环境必现 `payload-dump\frozen-registry.log` ENOENT，注册表整段失效）。
+- `scripts/connect-lan.bat` 用 `XP_GUARD=0`（`XP_LOW_LEVEL` 是阈值不是开关）。
 - `src/deploy/start.sh` 的 `BOT1_PW` / `BOT2_PW` 占位符未加引号（`<...>` 被 shell 当成重定向，
   直接 `syntax error`），现改为 `'<...>'`；8 个 shell 脚本已全部过 `sh -n`。
 

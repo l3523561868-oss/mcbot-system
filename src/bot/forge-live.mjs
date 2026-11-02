@@ -113,7 +113,11 @@ function capturedGroups() {
   for (const c of CAPTURED) {
     const spec = getCompSpec(c.id);
     const ver = c.version || spec.v;
-    const fl = c.flow == null ? spec.f : (FLOW_MAP[c.flow] ?? spec.f);
+    // 抓包里 flow 为空（0x00 = 未指定）时不要强行补成 CLIENTBOUND：
+    // 只有 channel-specs.json 明确给了方向才用，否则原样保留 0x00。
+    const known = SPEC[c.id] || learnedSpecs[c.id];
+    const fl = c.flow != null ? (FLOW_MAP[c.flow] ?? spec.f)
+             : (known && known.f != null ? known.f : null);
     const comp = component(c.id, fl, c.optional !== false, ver);
     if (c.proto === "PLAY") play.push(comp); else cfg.push(comp);
   }
@@ -749,9 +753,13 @@ function startBot() {
       try {
         const buf = Buffer.isBuffer(p.data) ? p.data : Buffer.from(p.data || []);
         global.__frzCount = (global.__frzCount || 0) + 1;
-        if (global.__frzCount <= 40) {
-          fs.appendFileSync(path.join(HERE, "payload-dump", "frozen-registry.log"),
-            "#" + global.__frzCount + " len=" + buf.length + " hex=" + buf.toString("hex") + "\n");
+        // 调试转储默认关闭（内容含真实注册表名）；DEBUG_DUMP=1 才落盘，且不因目录缺失中断解析
+        if (process.env.DEBUG_DUMP === "1" && global.__frzCount <= 40) {
+          try {
+            fs.mkdirSync(path.join(HERE, "payload-dump"), { recursive: true });
+            fs.appendFileSync(path.join(HERE, "payload-dump", "frozen-registry.log"),
+              "#" + global.__frzCount + " len=" + buf.length + " hex=" + buf.toString("hex") + "\n");
+          } catch (e) { /* 转储失败不影响解析 */ }
         }
         // ---- 通用自动注册：不写死注册表名，凡 prismarine-registry 里有对应表的都自动灌入 ----
         let o = 0;

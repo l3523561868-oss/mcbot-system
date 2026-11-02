@@ -7,8 +7,8 @@
  *       不连接任何外部服务器、不读取账号凭证（离线模式，用户名随便填）。
  *
  * 用法：
- *   node src/tools/capture-client.mjs                 # 监听 25580
- *   node src/tools/capture-client.mjs --port 25581
+ *   node capture-client.mjs                            # 监听 25580，等待 300 秒
+ *   node capture-client.mjs --port 25581 --wait 600
  *   node src/tools/capture-client.mjs -o my-capture.json
  *
  * 然后：游戏客户端 → 多人游戏 → 添加服务器 → 127.0.0.1:25580 → 连接
@@ -30,7 +30,7 @@ const argOf = (n, d) => {
 const PORT = Number(argOf("--port", "25580"));
 const OUT = argOf("-o", path.join(HERE, "..", "bot", "capture", "capture-from-client.json"));
 const VERSION = argOf("--version", "1.21.1");
-const WAIT_MS = Number(argOf("--wait", "20000"));
+const WAIT_SEC = Number(argOf("--wait", "300"));   // 秒
 
 // ---------- 协议工具 ----------
 const varint = (n) => {
@@ -118,11 +118,19 @@ server.on("login", (client) => {
     }
   };
 
-  setTimeout(prompt, 300);
-  setTimeout(prompt, 1500);
+  // 真客户端加载较慢，单次请求容易发在配置阶段之前被丢掉：周期性重发直到收到
+  let tries = 0;
+  const timer = setInterval(() => {
+    if (done || tries++ > 60) { clearInterval(timer); return; }
+    prompt();
+  }, 800);
 
   client.on("custom_payload", (p) => {
-    if (p.channel !== "neoforge:register") return;
+    if (p.channel !== "neoforge:register") {
+      const n = Buffer.isBuffer(p.data) ? p.data.length : (p.data || []).length;
+      console.log(`[capture] 入站 ${p.channel} ${n}B`);
+      return;
+    }
     if (done) return;
     const buf = Buffer.isBuffer(p.data) ? p.data : Buffer.from(p.data || []);
     if (buf.length < 4) return;
@@ -157,7 +165,7 @@ server.on("error", (e) => {
 
 setTimeout(() => {
   if (!done) {
-    console.log(`\n[capture] ${Math.round(WAIT_MS / 1000)} 秒内没收到通道表，退出。`);
+    console.log(`\n[capture] ${WAIT_SEC} 秒内没收到通道表，退出。`);
     process.exit(2);
   }
-}, WAIT_MS + 5000);
+}, WAIT_SEC * 1000);
